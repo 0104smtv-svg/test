@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Фотозвіт</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Фотозвіт">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #f0f4f8;           /* Світлий фон сторінки */
+    --surface: #ffffff;      /* Білі картки/блоки */
+    --surface2: #dce3f0;     /* Вкладені елементи */
+    --border: #d0d8e8;       /* Рамки */
+    --accent: #2563eb;       /* Основний акцент */
+    --accent2: #3b7ff5;      /* Світліший акцент */
+    --success: #16a34a;      /* Зелений */
+    --error: #dc2626;        /* Червоний */
+    --warning: #d97706;      /* Жовтий */
+    --text: #1e2a3a;         /* Основний текст */
+    --text2: #4a5568;        /* Другорядний текст */
+    --text3: #718096;        /* Підказки, плейсхолдери */
+    --radius: 12px;
+    --font: 'Geologica', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding-bottom: 40px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 14px;
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header-text h1 { font-size: 15px; font-weight: 600; }
+  .header-text p  { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+  #offline-banner {
+    background: linear-gradient(90deg, #fef3c7, #fde68a);
+    color: #92400e; font-size: 12px; font-weight: 500;
+    padding: 8px 20px; display: none;
+    align-items: center; justify-content: center; gap: 6px;
+  }
+  #offline-banner.visible { display: flex; }
+
+  #queue-badge {
+    background: var(--warning); color: #000; font-size: 11px; font-weight: 700;
+    border-radius: 999px; padding: 2px 8px; display: none; cursor: pointer;
+    margin-left: auto; flex-shrink: 0;
+  }
+  #queue-badge.visible { display: inline-block; }
+
+  #dict-bar {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 7px 20px; font-size: 12px; color: var(--text3);
+    display: flex; align-items: center; gap: 8px;
+  }
+  #dict-bar .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text3); flex-shrink: 0; transition: background .3s;
+  }
+  #dict-bar .dot.ok      { background: var(--success); }
+  #dict-bar .dot.loading { background: var(--warning); animation: pulse 1s infinite; }
+  #dict-bar .dot.error   { background: var(--error); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  main { max-width: 560px; margin: 0 auto; padding: 20px 16px 0; }
+
+  .section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    color: var(--text3); text-transform: uppercase;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  .field { margin-bottom: 16px; position: relative; }
+  .field:last-child { margin-bottom: 0; }
+
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  label .req { color: var(--accent2); margin-left: 2px; }
+
+  .input-wrap { position: relative; }
+  .input-wrap .clear-btn {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 16px; display: none; padding: 2px 4px;
+  }
+  .input-wrap .clear-btn.visible { display: block; }
+
+  input[type="text"] {
+    width: 100%; padding: 12px 32px 12px 13px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--font); font-size: 16px;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,127,245,.15); }
+  input.autofilled { border-color: rgba(59,127,245,.4); background: rgba(59,127,245,.05); }
+  input::placeholder { color: var(--text3); }
+
+  .ac-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; max-height: 260px; overflow-y: auto;
+    z-index: 300; display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .ac-dropdown.open { display: block; }
+  .ac-item {
+    padding: 10px 13px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+    display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center;
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.active { background: rgba(59,127,245,.14); }
+  .ac-account { font-size: 12px; font-weight: 700; color: var(--accent2); grid-column:1; white-space:nowrap; }
+  .ac-name    { font-size: 14px; font-weight: 500; color: var(--text); grid-column:2; grid-row:1; }
+  .ac-address { font-size: 12px; color: var(--text2); grid-column: 1 / -1; }
+  .ac-empty   { padding: 14px; color: var(--text3); font-size: 13px; text-align: center; }
+  .ac-count   { padding: 6px 13px; font-size: 11px; color: var(--text3); border-bottom: 1px solid var(--border); background: var(--surface); }
+  .ac-item-simple {
+    padding: 11px 13px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--text);
+    transition: background .1s;
+  }
+  .ac-item-simple:last-child { border-bottom: none; }
+  .ac-item-simple:hover, .ac-item-simple.active { background: rgba(59,127,245,.14); }
+
+  mark { background: rgba(91,155,255,.3); color: inherit; border-radius: 2px; }
+
+  textarea {
+    width: 100%; padding: 11px 13px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--font); font-size: 16px;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none; resize: vertical; min-height: 80px;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,127,245,.15); }
+  textarea::placeholder { color: var(--text3); }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* GPS індикатор */
+  #gps-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 13px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    font-size: 12px; color: var(--text2);
+  }
+  #gps-status .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text3); flex-shrink: 0; transition: background .3s;
+  }
+  #gps-status .dot.ok      { background: var(--success); }
+  #gps-status .dot.loading { background: var(--warning); animation: pulse 1s infinite; }
+  #gps-status .dot.error   { background: var(--error); }
+  #gps-coords { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  #gps-retry {
+    margin-left: auto; background: none; border: 1px solid var(--border);
+    color: var(--text2); border-radius: 6px; padding: 4px 10px;
+    font-size: 11px; cursor: pointer; font-family: var(--font);
+    display: none;
+  }
+  #gps-retry.visible { display: block; }
+
+  /* Фото */
+  .photo-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .btn-photo {
+    padding: 14px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 6px; transition: all .15s;
+  }
+  .btn-photo:hover { border-color: var(--accent); background: rgba(59,127,245,.1); }
+  .btn-photo input { display: none; }
+
+  .previews { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+  .preview-item {
+    position: relative; aspect-ratio: 1;
+    border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .preview-item img { width:100%; height:100%; object-fit:cover; display:block; }
+  .preview-remove {
+    position: absolute; top: 4px; right: 4px;
+    background: rgba(0,0,0,.75); border: none; color: #fff;
+    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .preview-size {
+    position: absolute; bottom: 4px; left: 4px;
+    background: rgba(0,0,0,.65); color: #fff;
+    font-size: 9px; padding: 1px 5px; border-radius: 4px;
+    line-height: 1.4; white-space: nowrap;
+  }
+  .preview-size s { opacity: .55; text-decoration: line-through; margin-left: 2px; }
+  .preview-gps {
+    position: absolute; bottom: 4px; right: 4px;
+    background: rgba(34,197,94,.85); color: #fff;
+    font-size: 9px; padding: 1px 4px; border-radius: 4px;
+  }
+  #no-photo-hint { font-size: 13px; color: var(--text3); text-align: center; padding: 12px 0; }
+
+  /* Submit */
+  #submit-btn {
+    width: 100%; padding: 16px;
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    font-family: var(--font); font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-top: 6px;
+  }
+  #submit-btn:hover  { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,127,245,.4); }
+  #submit-btn:active { transform: translateY(0); }
+  #submit-btn:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #upload-progress { margin-top: 10px; display: none; }
+  #upload-progress.visible { display: block; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; width: 0%; }
+  .progress-text { font-size: 11px; color: var(--text3); margin-top: 4px; text-align: center; }
+
+  #status-msg {
+    margin-top: 12px; padding: 14px 16px; border-radius: 8px;
+    font-size: 14px; font-weight: 500; display: none; text-align: center; line-height: 1.5;
+  }
+  #status-msg.success { background: rgba(21,128,61,.08); border: 1px solid rgba(21,128,61,.2); color: #166534; display: block; }
+  #status-msg.error   { background: rgba(185,28,28,.08);  border: 1px solid rgba(185,28,28,.2);  color: #b91c1c; display: block; }
+
+  #clear-data-btn {
+    width: 100%; margin-top: 16px; padding: 11px;
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text3);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 7px; transition: all .15s;
+  }
+  #clear-data-btn:hover { border-color: var(--error); color: var(--error); background: rgba(185,28,28,.04); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <rect width="32" height="32" rx="8" fill="#3b7ff5" fill-opacity=".15"/>
+    <path d="M16 7L7 12v8l9 5 9-5v-8L16 7z" stroke="#3b7ff5" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M7 12l9 5 9-5M16 17v8" stroke="#3b7ff5" stroke-width="1.8" stroke-linejoin="round"/>
+  </svg>
+  <div class="header-text">
+    <h1>Фотозвіт об'єкту</h1>
+    <p>Заповніть форму та завантажте фото</p>
+  </div>
+  <span id="queue-badge" title="Записи в черзі офлайн">0 в черзі</span>
+</header>
+
+<div id="offline-banner">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.56 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+  </svg>
+  Немає з'єднання — дані збережено і будуть відправлені автоматично
+</div>
+
+<div id="dict-bar">
+  <span class="dot loading" id="dict-dot"></span>
+  <span id="dict-label">Завантаження довідника...</span>
+</div>
+
+<main>
+
+  <!-- Працівник -->
+  <div class="section">
+    <div class="section-title">Працівник</div>
+    <div class="field">
+      <label for="workerName">ПІБ працівника<span class="req">*</span></label>
+      <div class="input-wrap" id="wrap-worker">
+        <input type="text" id="workerName" placeholder="Введіть ПІБ..." autocomplete="off">
+        <button class="clear-btn" data-target="workerName">✕</button>
+        <div class="ac-dropdown" id="dd-worker"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Об'єкт -->
+  <div class="section">
+    <div class="section-title">Об'єкт</div>
+    <div class="field">
+      <label for="objectName">Назва об'єкту<span class="req">*</span></label>
+      <div class="input-wrap" id="wrap-object">
+        <input type="text" id="objectName" placeholder="Введіть назву об'єкту..." autocomplete="off">
+        <button class="clear-btn" data-target="objectName">✕</button>
+        <div class="ac-dropdown" id="dd-object"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Дані об'єкту -->
+  <div class="section">
+    <div class="section-title">Дані об'єкту</div>
+
+    <div class="field">
+      <label for="f-account">Особ. рах.<span class="req">*</span></label>
+      <div class="input-wrap">
+        <input type="text" id="f-account" placeholder="Введіть рахунок..." autocomplete="off" data-field="account">
+        <button class="clear-btn" data-target="f-account">✕</button>
+        <div class="ac-dropdown" id="dd-account"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-name">Прізвище ІБ</label>
+      <div class="input-wrap">
+        <input type="text" id="f-name" placeholder="Введіть прізвище..." autocomplete="off" data-field="name">
+        <button class="clear-btn" data-target="f-name">✕</button>
+        <div class="ac-dropdown" id="dd-name"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-locality">Населений пункт</label>
+      <div class="input-wrap">
+        <input type="text" id="f-locality" placeholder="Введіть населений пункт..." autocomplete="off" data-field="locality">
+        <button class="clear-btn" data-target="f-locality">✕</button>
+        <div class="ac-dropdown" id="dd-locality"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-street">Вулиця</label>
+      <div class="input-wrap">
+        <input type="text" id="f-street" placeholder="Введіть вулицю..." autocomplete="off" data-field="street">
+        <button class="clear-btn" data-target="f-street">✕</button>
+        <div class="ac-dropdown" id="dd-street"></div>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label for="f-building">Буд/др</label>
+        <div class="input-wrap">
+          <input type="text" id="f-building" placeholder="12А" autocomplete="off" data-field="building">
+          <button class="clear-btn" data-target="f-building">✕</button>
+          <div class="ac-dropdown" id="dd-building"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-apt">Кв/др</label>
+        <div class="input-wrap">
+          <input type="text" id="f-apt" placeholder="34" autocomplete="off" data-field="apt">
+          <button class="clear-btn" data-target="f-apt">✕</button>
+          <div class="ac-dropdown" id="dd-apt"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" id="field-note">
+      <label for="f-note">Примітка</label>
+      <div class="input-wrap">
+        <textarea id="f-note" placeholder="Введіть примітку..." rows="3"></textarea>
+      </div>
+    </div>
+
+    <button id="clear-data-btn" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+      Очистити дані об'єкту
+    </button>
+  </div>
+
+  <!-- Координати -->
+  <div class="section">
+    <div class="section-title">Геолокація</div>
+    <div id="gps-status">
+      <span class="dot loading" id="gps-dot"></span>
+      <span id="gps-label">Визначення координат...</span>
+      <button id="gps-retry">↻ Повторити</button>
+    </div>
+    <div id="gps-coords"></div>
+  </div>
+
+  <!-- Фото -->
+  <div class="section">
+    <div class="section-title">Фото<span class="req" style="margin-left:4px">*</span></div>
+    <div class="photo-buttons">
+      <label class="btn-photo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Камера
+        <input type="file" id="camera-input" accept="image/*" capture="environment" multiple>
+      </label>
+      <label class="btn-photo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Галерея
+        <input type="file" id="gallery-input" accept="image/*" multiple>
+      </label>
+    </div>
+    <div class="previews" id="previews"></div>
+    <p id="no-photo-hint">Фото не додано</p>
+  </div>
+
+  <button id="submit-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+    Надіслати звіт
+  </button>
+
+  <div id="upload-progress">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-text" id="progress-text">Відправка...</div>
+  </div>
+  <div id="status-msg"></div>
+
+</main>
+
+<script>
+// ══════════════════════════════════════════
+// URL визначається автоматично (Apps Script)
+// ══════════════════════════════════════════
+const SCRIPT_URL = window.location.hostname.includes('github.io')
+  ? 'https://script.google.com/macros/s/AKfycbyiAh4D69gVJH44y2gbU5uQMzFMwNUuBSDA9EI6gNd0sqwB9PcUpNSAnzhKH2BNIIjw/exec'
+  : '__SCRIPT_URL__';
+
+// ════════════════════════════════════════════════════════
+// EXIF — зчитування GPS з метаданих JPEG
+// ════════════════════════════════════════════════════════
+function readExifGPS(arrayBuffer) {
+  try {
+    const view = new DataView(arrayBuffer);
+    if (view.getUint16(0) !== 0xFFD8) return null; // не JPEG
+
+    let offset = 2;
+    while (offset < view.byteLength - 2) {
+      const marker = view.getUint16(offset);
+      offset += 2;
+      if (marker === 0xFFE1) { // APP1 (EXIF)
+        const len = view.getUint16(offset);
+        const exifHeader = String.fromCharCode(
+          view.getUint8(offset+2), view.getUint8(offset+3),
+          view.getUint8(offset+4), view.getUint8(offset+5)
+        );
+        if (exifHeader === 'Exif') {
+          return parseExifGPS(view, offset + 8, len - 8);
+        }
+        offset += len;
+      } else if ((marker & 0xFF00) === 0xFF00) {
+        offset += view.getUint16(offset);
+      } else break;
+    }
+  } catch(e) {}
+  return null;
+}
+
+function parseExifGPS(view, start, len) {
+  try {
+    // Визначаємо порядок байт
+    const byteOrder = view.getUint16(start);
+    const le = (byteOrder === 0x4949); // little-endian
+    const getU16 = (o) => view.getUint16(start + o, le);
+    const getU32 = (o) => view.getUint32(start + o, le);
+    const getI32 = (o) => view.getInt32(start + o, le);
+
+    if (getU16(2) !== 0x002A) return null;
+    let ifdOffset = getU32(4);
+
+    // Шукаємо IFD0 → GPS IFD
+    let gpsOffset = null;
+    let count = getU16(ifdOffset);
+    for (let i = 0; i < count; i++) {
+      const tag = getU16(ifdOffset + 2 + i * 12);
+      if (tag === 0x8825) { // GPSInfo
+        gpsOffset = getU32(ifdOffset + 2 + i * 12 + 8);
+        break;
+      }
+    }
+    if (!gpsOffset) return null;
+
+    // Читаємо GPS IFD
+    const gps = {};
+    count = getU16(gpsOffset);
+    for (let i = 0; i < count; i++) {
+      const base = gpsOffset + 2 + i * 12;
+      const tag  = getU16(base);
+      const type = getU16(base + 2);
+      const cnt  = getU32(base + 4);
+      const valOffset = getU32(base + 8);
+
+      if (tag === 1) gps.latRef  = String.fromCharCode(view.getUint8(start + base + 8));
+      if (tag === 3) gps.lonRef  = String.fromCharCode(view.getUint8(start + base + 8));
+      if (tag === 2) gps.latDMS  = readRationals(view, start + valOffset, 3, le);
+      if (tag === 4) gps.lonDMS  = readRationals(view, start + valOffset, 3, le);
+    }
+
+    if (!gps.latDMS || !gps.lonDMS) return null;
+
+    let lat = dms2dec(gps.latDMS);
+    let lon = dms2dec(gps.lonDMS);
+    if (gps.latRef === 'S') lat = -lat;
+    if (gps.lonRef === 'W') lon = -lon;
+
+    if (isNaN(lat) || isNaN(lon)) return null;
+    return { lat: +lat.toFixed(7), lon: +lon.toFixed(7), source: 'exif' };
+  } catch(e) { return null; }
+}
+
+function readRationals(view, offset, count, le) {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const num = view.getUint32(offset + i * 8,     le);
+    const den = view.getUint32(offset + i * 8 + 4, le);
+    result.push(den ? num / den : 0);
+  }
+  return result;
+}
+
+function dms2dec([d, m, s]) {
+  return d + m / 60 + s / 3600;
+}
+
+// ════════════════════════════════════════════════════════
+// ГЕОЛОКАЦІЯ ПРИСТРОЮ
+// ════════════════════════════════════════════════════════
+let browserCoords = null; // {lat, lon, source:'browser'} або null
+let geoWatchId    = null; // ID відстеження watchPosition
+
+function startGeolocation() {
+  setGpsStatus('loading', 'Визначення координат...');
+  document.getElementById('gps-retry').classList.remove('visible');
+
+  if (!navigator.geolocation) {
+    setGpsStatus('error', 'Геолокація не підтримується браузером');
+    document.getElementById('gps-retry').classList.remove('visible');
+    return;
+  }
+
+  // Зупиняємо попереднє відстеження якщо було (напр. при натисканні "Повторити")
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+  }
+
+  // watchPosition — тримає GPS чіп активним і оновлює координати постійно.
+  // Завдяки цьому getCurrentPosition при відправці отримує свіжі дані миттєво.
+  geoWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      browserCoords = {
+        lat: +pos.coords.latitude.toFixed(7),
+        lon: +pos.coords.longitude.toFixed(7),
+        source: 'browser'
+      };
+      const acc = pos.coords.accuracy ? ` (±${Math.round(pos.coords.accuracy)} м)` : '';
+      setGpsStatus('ok', `GPS пристрою${acc}`);
+      document.getElementById('gps-coords').textContent =
+        `${browserCoords.lat}, ${browserCoords.lon}`;
+      document.getElementById('gps-retry').classList.remove('visible');
+    },
+    err => {
+      browserCoords = null;
+      const msgs = {
+        1: 'Доступ до геолокації заборонено',
+        2: 'Координати недоступні',
+        3: 'Час очікування вичерпано'
+      };
+      setGpsStatus('error', msgs[err.code] || 'Помилка геолокації');
+      document.getElementById('gps-retry').classList.add('visible');
+      document.getElementById('gps-coords').textContent = '';
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+  );
+}
+
+function setGpsStatus(state, text) {
+  const dot   = document.getElementById('gps-dot');
+  const label = document.getElementById('gps-label');
+  dot.className = 'dot ' + state;
+  label.textContent = text;
+}
+
+document.getElementById('gps-retry').addEventListener('click', startGeolocation);
+startGeolocation();
+
+const CACHE_KEY     = 'fotozvit_dict_v1';
+const CACHE_TTL_MS  = 60 * 60 * 1000; // 1 година — після цього оновлюємо у фоні
+
+// ════════════════════════════════════════════════════════
+// JsonP — завантаження без CORS обмежень
+// ════════════════════════════════════════════════════════
+function fetchJsonP(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 15000);
+
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.onerror = () => { cleanup(); reject(new Error('Script error')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    document.head.appendChild(script);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// ДОВІДНИК — кеш + завантаження
+// ════════════════════════════════════════════════════════
+let DB        = [];
+let workersDB = [];
+let objectsDB = [];
+let dictReady = false;
+
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw);
+    const age = Date.now() - (cached.ts || 0);
+    if (!cached.abonents) return false;
+    DB        = cached.abonents || [];
+    workersDB = cached.workers  || [];
+    objectsDB = cached.objects  || [];
+    dictReady = true;
+    return { fresh: age < CACHE_TTL_MS, age };
+  } catch(e) { return false; }
+}
+
+function saveToCache(abonents, workers, objects) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      ts: Date.now(), abonents, workers, objects
+    }));
+  } catch(e) {}
+}
+
+function setDictStatus(state, text) {
+  document.getElementById('dict-dot').className = 'dot ' + state;
+  document.getElementById('dict-label').textContent = text;
+}
+
+async function fetchAllDicts() {
+  const isGitHub = window.location.hostname.includes('github.io');
+  const fetcher  = isGitHub ? fetchJsonP : (url) => fetch(url).then(r => r.json());
+
+  const [dataA, dataW, dataO] = await Promise.all([
+    fetcher(`${SCRIPT_URL}?action=getAbonents`),
+    fetcher(`${SCRIPT_URL}?action=getWorkers`),
+    fetcher(`${SCRIPT_URL}?action=getObjects`)
+  ]);
+
+  if (dataA.status === 'ok') DB        = dataA.data;
+  if (dataW.status === 'ok') workersDB = dataW.data;
+  if (dataO.status === 'ok') objectsDB = dataO.data;
+
+  saveToCache(DB, workersDB, objectsDB);
+  return true;
+}
+
+async function loadDict() {
+  const cached = loadFromCache();
+
+  if (cached && cached.fresh) {
+    // Кеш свіжий — показуємо одразу, оновлюємо у фоні
+    dictReady = true;
+    setDictStatus('ok', `Довідник: ${DB.length} абонентів (кеш)`);
+    initSimpleAC();
+    // Фонове оновлення
+    fetchAllDicts().then(() => {
+      setTimeout(() => {
+        setDictStatus('ok', `${DB.length} абонентів у довіднику`);
+      }, 3000);
+    }).catch(() => {});
+    return;
+  }
+
+  if (cached) {
+    // Кеш застарів — показуємо старий поки завантажуємо новий
+    dictReady = true;
+    setDictStatus('loading', `Оновлення довідника...`);
+    initSimpleAC();
+  } else {
+    setDictStatus('loading', 'Завантаження довідника...');
+  }
+
+  try {
+    await fetchAllDicts();
+    dictReady = true;
+    setDictStatus('ok', `Довідник: ${DB.length} абонентів`);
+    setTimeout(() => {
+      setDictStatus('ok', `${DB.length} абонентів у довіднику`);
+    }, 3000);
+    initSimpleAC();
+  } catch(err) {
+    if (dictReady) {
+      // Є кеш — продовжуємо з ним
+      setDictStatus('ok', `Довідник: ${DB.length} абонентів (офлайн)`);
+    } else {
+      setDictStatus('error', 'Помилка завантаження довідника');
+    }
+  }
+}
+
+loadDict();
+
+
+// ════════════════════════════════════════════════════════
+// РЕЖИМ ФОРМИ залежно від типу об'єкту
+// ════════════════════════════════════════════════════════
+let currentObjectType = '1';
+
+function applyObjectType(type) {
+  currentObjectType = type;
+  const isType2 = type === '2';
+
+  // Поля які приховуються при типі 2
+  const hideFields = ['account', 'name', 'apt'];
+  hideFields.forEach(f => {
+    const field = inputs[f] ? inputs[f].closest('.field') : null;
+    if (field) {
+      field.style.display = isType2 ? 'none' : '';
+      if (isType2) {
+        inputs[f].value = '';
+        inputs[f].classList.remove('autofilled');
+        updateClearBtn(f);
+      }
+    }
+  });
+
+  // Прибираємо обов'язковість з особ. рах. при типі 2
+  const accountLabel = document.querySelector('label[for="f-account"] .req');
+  if (accountLabel) accountLabel.style.display = isType2 ? 'none' : '';
+}
+
+// ════════════════════════════════════════════════════════
+// АВТОДОПОВНЕННЯ ДЛЯ ПРОСТИХ ПОЛІВ (працівник, об'єкт)
+// ════════════════════════════════════════════════════════
+function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(dropdownId);
+  const btn   = document.querySelector(`.clear-btn[data-target="${inputId}"]`);
+  let idx = -1;
+
+  function render(list, q) {
+    idx = -1;
+    if (!list.length) {
+      dd.innerHTML = '<div class="ac-empty">Нічого не знайдено</div>';
+    } else {
+      // list може бути масив рядків або масив {name, type}
+      dd.innerHTML = list.slice(0, 20).map(item => {
+        const label = typeof item === 'object' ? item.name : item;
+        const type  = typeof item === 'object' ? item.type : '';
+        const badge = type === '2'
+          ? ' <span style="font-size:10px;opacity:.5;margin-left:4px">[2]</span>' : '';
+        return `<div class="ac-item-simple" data-value="${esc(label)}" data-type="${esc(type)}">${hilite(label, q)}${badge}</div>`;
+      }).join('');
+      dd.querySelectorAll('.ac-item-simple').forEach(el => {
+        el.addEventListener('mousedown', e => { e.preventDefault(); select(el.dataset.value, el.dataset.type); });
+        let touchStartY = 0;
+        el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+        el.addEventListener('touchend', e => {
+          const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+          if (diff < 8) { e.preventDefault(); select(el.dataset.value, el.dataset.type); }
+        });
+      });
+    }
+    dd.classList.add('open');
+  }
+
+  function select(val, type) {
+    input.value = val;
+    if (btn) btn.classList.add('visible');
+    dd.classList.remove('open');
+    if (onSelect) onSelect(val, type);
+  }
+
+  function filter(q) {
+    const list = getList();
+    if (!list.length) return;
+    const filtered = q
+      ? list.filter(item => {
+          const label = typeof item === 'object' ? item.name : item;
+          return label.toLowerCase().includes(q.toLowerCase());
+        })
+      : list;
+    if (filtered.length) render(filtered, q);
+    else dd.classList.remove('open');
+  }
+
+  input.addEventListener('input', () => {
+    if (btn) btn.classList.toggle('visible', !!input.value);
+    // Якщо поле очищено — скидаємо тип об'єкту
+    if (!input.value && inputId === 'objectName') applyObjectType('1');
+    filter(input.value.trim());
+  });
+  input.addEventListener('focus', () => { closeAll(); filter(input.value.trim()); });
+  input.addEventListener('keydown', e => {
+    const items = dd.querySelectorAll('.ac-item-simple');
+    if (!items.length || !dd.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx+1, items.length-1); items.forEach((el,i) => el.classList.toggle('active', i===idx)); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); idx = Math.max(idx-1, 0); items.forEach((el,i) => el.classList.toggle('active', i===idx)); }
+    if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); select(items[idx].dataset.value, items[idx].dataset.type); }
+    if (e.key === 'Escape') dd.classList.remove('open');
+  });
+  if (btn) btn.addEventListener('click', () => {
+    input.value = '';
+    btn.classList.remove('visible');
+    if (inputId === 'objectName') applyObjectType('1');
+    input.focus();
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest(`#wrap-${inputId === 'workerName' ? 'worker' : 'object'}`)) dd.classList.remove('open');
+  });
+}
+
+// Ініціалізація AC для працівника та об'єкту
+// Викликається після завантаження довідника (з loadDict або з кешу)
+function initSimpleAC() {
+  setupSimpleAC('workerName', 'dd-worker', () => workersDB);
+  setupSimpleAC('objectName', 'dd-object', () => objectsDB, (val, type) => {
+    applyObjectType(type || '1');
+  });
+}
+
+
+const FIELDS = ['account','name','locality','street','building','apt'];
+const inputs = {}, dropdowns = {};
+FIELDS.forEach(f => {
+  inputs[f]    = document.getElementById('f-' + f);
+  dropdowns[f] = document.getElementById('dd-' + f);
+});
+
+let acIndex = {};
+FIELDS.forEach(f => acIndex[f] = -1);
+
+function getActiveFilters(exceptField) {
+  const filters = {};
+  FIELDS.forEach(f => {
+    if (f === exceptField) return;
+    const val = inputs[f].value.trim();
+    if (val) filters[f] = val.toLowerCase();
+  });
+  return filters;
+}
+
+function matchesFilters(rec, filters) {
+  return Object.entries(filters).every(([f, val]) => rec[f].toLowerCase().includes(val));
+}
+
+function getCandidates(field, query) {
+  const filters = getActiveFilters(field);
+  const q = query.toLowerCase();
+  let pool = DB.filter(rec => matchesFilters(rec, filters));
+  if (q) pool = pool.filter(rec => rec[field].toLowerCase().includes(q));
+  const seen = new Set(), result = [];
+  for (const rec of pool) {
+    if (!seen.has(rec[field])) { seen.add(rec[field]); result.push(rec); }
+  }
+  return result;
+}
+
+function renderDropdown(field, candidates, query) {
+  const dd = dropdowns[field];
+  acIndex[field] = -1;
+
+  // Поля які показують тільки своє значення (не повний запис)
+  const simpleFields = ['locality', 'street', 'building', 'apt'];
+
+  if (!candidates.length) {
+    dd.innerHTML = '<div class="ac-empty">Нічого не знайдено</div>';
+  } else if (simpleFields.includes(field)) {
+    // Показуємо тільки унікальні значення поля
+    const shown = candidates.slice(0, 20);
+    let html = candidates.length > 20
+      ? `<div class="ac-count">Показано 20 з ${candidates.length} — уточніть запит</div>` : '';
+    html += shown.map(rec => {
+      const val = rec[field];
+      return `<div class="ac-item-simple"
+        data-account="${esc(rec.account)}" data-name="${esc(rec.name)}"
+        data-locality="${esc(rec.locality)}" data-street="${esc(rec.street)}"
+        data-building="${esc(rec.building)}" data-apt="${esc(rec.apt)}">
+        ${hilite(val, query)}
+      </div>`;
+    }).join('');
+    dd.innerHTML = html;
+    dd.querySelectorAll('.ac-item-simple').forEach(el => {
+      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el, field); });
+      let touchStartY = 0;
+      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (diff < 8) { e.preventDefault(); selectRecord(el, field); }
+      });
+    });
+  } else {
+    // Для account і name — повний запис як раніше
+    const isT2 = currentObjectType === '2';
+    const shown = candidates.slice(0, 15);
+    let html = candidates.length > 15
+      ? `<div class="ac-count">Показано 15 з ${candidates.length} — уточніть запит</div>` : '';
+    html += shown.map(rec => {
+      const addr = [rec.locality, rec.street, rec.building,
+        !isT2 && rec.apt ? 'кв.'+rec.apt : ''].filter(Boolean).join(', ');
+      return `<div class="ac-item"
+        data-account="${esc(rec.account)}" data-name="${esc(rec.name)}"
+        data-locality="${esc(rec.locality)}" data-street="${esc(rec.street)}"
+        data-building="${esc(rec.building)}" data-apt="${esc(rec.apt)}">
+        ${!isT2 ? `<span class="ac-account">${hilite(rec.account, query)}</span>` : ''}
+        ${!isT2 ? `<span class="ac-name">${hilite(rec.name, query)}</span>` : ''}
+        <span class="ac-address" style="${isT2 ? 'grid-column:1/-1' : ''}">${esc(addr)}</span>
+      </div>`;
+    }).join('');
+    dd.innerHTML = html;
+    dd.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el); });
+      let touchStartY = 0;
+      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (diff < 8) { e.preventDefault(); selectRecord(el); }
+      });
+    });
+  }
+  dd.classList.add('open');
+}
+
+function closeAll() {
+  FIELDS.forEach(f => { dropdowns[f].classList.remove('open'); acIndex[f] = -1; });
+  // Закриваємо також dropdown для Працівник і Об'єкт
+  document.getElementById('dd-worker').classList.remove('open');
+  document.getElementById('dd-object').classList.remove('open');
+}
+
+const simpleFields = new Set(['locality', 'street', 'building', 'apt']);
+
+function selectRecord(el, clickedField) {
+  if (clickedField && simpleFields.has(clickedField)) {
+    // Заповнюємо тільки вибране поле
+    const val = el.dataset[clickedField] || '';
+    inputs[clickedField].value = val;
+    inputs[clickedField].classList.toggle('autofilled', !!val);
+    updateClearBtn(clickedField);
+  } else {
+    // Заповнюємо всі поля (вибір по рахунку або імені)
+    FIELDS.forEach(f => {
+      const val = el.dataset[f] || '';
+      inputs[f].value = val;
+      inputs[f].classList.toggle('autofilled', !!val);
+      updateClearBtn(f);
+    });
+  }
+  closeAll();
+}
+
+FIELDS.forEach(field => {
+  const input = inputs[field];
+  input.addEventListener('input', () => {
+    if (!dictReady) return;
+    input.classList.remove('autofilled');
+    updateClearBtn(field);
+    const q = input.value.trim();
+    const candidates = getCandidates(field, q);
+    if (!q && !hasOtherFilters(field)) { closeAll(); return; }
+    renderDropdown(field, candidates, q);
+  });
+  input.addEventListener('focus', () => {
+    closeAll(); // закриваємо всі інші dropdown перед відкриттям свого
+    if (!dictReady) return;
+    const candidates = getCandidates(field, input.value.trim());
+    if (candidates.length) renderDropdown(field, candidates, input.value.trim());
+  });
+  input.addEventListener('keydown', e => {
+    const dd = dropdowns[field];
+    const items = dd.querySelectorAll('.ac-item');
+    if (!items.length || !dd.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIndex[field] = Math.min(acIndex[field]+1, items.length-1); highlightItems(items, acIndex[field]); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); acIndex[field] = Math.max(acIndex[field]-1, 0); highlightItems(items, acIndex[field]); }
+    if (e.key === 'Enter' && acIndex[field] >= 0) { e.preventDefault(); selectRecord(items[acIndex[field]], field); }
+    if (e.key === 'Escape') closeAll();
+  });
+});
+
+function highlightItems(items, idx) {
+  items.forEach((el,i) => el.classList.toggle('active', i === idx));
+  if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
+}
+function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
+document.addEventListener('click', e => { if (!e.target.closest('.input-wrap')) closeAll(); });
+
+// Закриваємо всі dropdown при фокусі на textarea "Примітка"
+document.getElementById('f-note').addEventListener('focus', () => closeAll());
+
+document.querySelectorAll('.clear-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const field = btn.dataset.target.replace('f-','');
+    inputs[field].value = '';
+    inputs[field].classList.remove('autofilled');
+    btn.classList.remove('visible');
+    inputs[field].focus();
+  });
+});
+function updateClearBtn(field) {
+  const btn = document.querySelector(`.clear-btn[data-target="f-${field}"]`);
+  if (btn) btn.classList.toggle('visible', !!inputs[field].value);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function hilite(text, q) {
+  if (!q) return esc(text);
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return esc(text);
+  return esc(text.slice(0,i)) + '<mark>' + esc(text.slice(i,i+q.length)) + '</mark>' + esc(text.slice(i+q.length));
+}
+
+// ════════════════════════════════════════════════════════
+// ФОТО + EXIF GPS
+// ════════════════════════════════════════════════════════
+let photos = []; // [{name, base64, mimeType, previewUrl, coords}]
+
+const previewsEl  = document.getElementById('previews');
+const noPhotoHint = document.getElementById('no-photo-hint');
+
+document.getElementById('camera-input').addEventListener('change',  e => addFiles(e.target.files));
+document.getElementById('gallery-input').addEventListener('change', e => addFiles(e.target.files));
+
+const MAX_SIZE = 1920;  // px по довшій стороні
+const JPEG_Q   = 0.82;  // якість JPEG
+
+function addFiles(files) {
+  Array.from(files).forEach(async file => {
+    if (!file.type.startsWith('image/')) return;
+
+    // Зчитуємо EXIF до стиснення (canvas видаляє метадані)
+    const arrBuf     = await file.arrayBuffer();
+    const exifCoords = readExifGPS(arrBuf);
+    const origKb     = Math.round(file.size / 1024);
+
+    // Стискаємо через canvas
+    const compressed = await compressImage(file);
+
+    photos.push({
+      name:       file.name,
+      base64:     compressed.base64,
+      mimeType:   'image/jpeg',
+      previewUrl: compressed.dataUrl,
+      coords:     exifCoords,
+      origKb,
+      sizeKb:     compressed.sizeKb
+    });
+    renderPreviews();
+  });
+  document.getElementById('camera-input').value  = '';
+  document.getElementById('gallery-input').value = '';
+}
+
+function compressImage(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > MAX_SIZE || h > MAX_SIZE) {
+          if (w >= h) { h = Math.round(h * MAX_SIZE / w); w = MAX_SIZE; }
+          else        { w = Math.round(w * MAX_SIZE / h); h = MAX_SIZE; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', JPEG_Q);
+        const base64  = dataUrl.split(',')[1];
+        const sizeKb  = Math.round(base64.length * 0.75 / 1024);
+        resolve({ dataUrl, base64, sizeKb });
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function fmtKb(kb) {
+  return kb < 1024 ? kb + ' КБ' : (kb / 1024).toFixed(1) + ' МБ';
+}
+
+function renderPreviews() {
+  noPhotoHint.style.display = photos.length ? 'none' : 'block';
+  previewsEl.innerHTML = photos.map((p, i) => `
+    <div class="preview-item">
+      <img src="${p.previewUrl}" alt="фото ${i+1}" loading="lazy">
+      <button class="preview-remove" data-i="${i}">✕</button>
+      <span class="preview-size">${fmtKb(p.sizeKb)}${p.origKb !== p.sizeKb ? ' <s>' + fmtKb(p.origKb) + '</s>' : ''}</span>
+      ${p.coords ? '<span class="preview-gps">GPS</span>' : ''}
+    </div>
+  `).join('');
+  previewsEl.querySelectorAll('.preview-remove').forEach(btn => {
+    btn.addEventListener('click', () => { photos.splice(+btn.dataset.i, 1); renderPreviews(); });
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// ВИЗНАЧЕННЯ КООРДИНАТ ДЛЯ ЗАПИСУ
+// Пріоритет: EXIF першого фото → геолокація браузера
+// ════════════════════════════════════════════════════════
+function getBestCoords() {
+  // Спочатку шукаємо EXIF у будь-якому фото
+  for (const p of photos) {
+    if (p.coords) return p.coords;
+  }
+  // Fallback: GPS пристрою
+  if (browserCoords) return browserCoords;
+  return { lat: '', lon: '', source: 'none' };
+}
+
+// ════════════════════════════════════════════════════════
+// ОФЛАЙН / ЧЕРГА — IndexedDB (без обмежень розміру)
+// ════════════════════════════════════════════════════════
+let isOnline = navigator.onLine;
+const offlineBanner = document.getElementById('offline-banner');
+const queueBadge   = document.getElementById('queue-badge');
+const DB_NAME    = 'fotozvit_db';
+const DB_VERSION = 1;
+const STORE_NAME = 'queue';
+
+// ── Відкрити IndexedDB ──
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+// ── Додати запис в чергу ──
+async function addToQueue(payload) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req   = store.add({ payload, ts: Date.now() });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+// ── Отримати всі записи ──
+async function getAllFromQueue() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req   = store.getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+// ── Видалити запис ──
+async function removeFromQueue(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req   = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+// ── Кількість записів ──
+async function getQueueCount() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req   = store.count();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => resolve(0);
+  });
+}
+
+async function updateQueueBadge() {
+  try {
+    const n = await getQueueCount();
+    queueBadge.textContent = n + ' в черзі';
+    queueBadge.classList.toggle('visible', n > 0);
+  } catch(e) {
+    queueBadge.classList.remove('visible');
+  }
+}
+
+// ── Захист від паралельних викликів flush ──
+let isFlushing = false;
+
+function updateOnlineStatus() {
+  isOnline = navigator.onLine;
+  offlineBanner.classList.toggle('visible', !isOnline);
+  if (isOnline) {
+    // Затримка 2с при завантаженні сторінки — уникаємо гонки з ініціалізацією
+    setTimeout(tryFlushQueue, 2000);
+  }
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+updateQueueBadge();
+
+document.getElementById('queue-badge').addEventListener('click', () => {
+  if (confirm('Відправити всі записи з черги?')) tryFlushQueue();
+});
+
+async function tryFlushQueue() {
+  if (!isOnline || isFlushing) return;
+  isFlushing = true;
+  try {
+    const queue = await getAllFromQueue();
+    if (!queue.length) return;
+    for (const item of queue) {
+      try {
+        const r = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(item.payload)
+        });
+        if (r.ok) {
+          const data = await r.json();
+          // Видаляємо з черги і при успіху, і при дублікаті (сервер вже має ці дані)
+          if (data.status === 'ok') await removeFromQueue(item.id);
+        }
+      } catch(e) { /* залишаємо в черзі — мережа ще недоступна */ }
+    }
+  } catch(e) {
+    console.log('Flush queue error:', e);
+  } finally {
+    isFlushing = false;
+    await updateQueueBadge();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ВІДПРАВКА
+// ════════════════════════════════════════════════════════
+const submitBtn    = document.getElementById('submit-btn');
+const statusMsg    = document.getElementById('status-msg');
+const progressEl   = document.getElementById('upload-progress');
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+
+submitBtn.addEventListener('click', handleSubmit);
+
+async function handleSubmit() {
+  statusMsg.className = '';
+  statusMsg.style.display = 'none';
+
+  const workerName = document.getElementById('workerName').value.trim();
+  const objectName = document.getElementById('objectName').value.trim();
+  const account    = inputs.account.value.trim();
+
+  if (!workerName)    { showError('Вкажіть ПІБ працівника'); return; }
+  if (!objectName)    { showError('Вкажіть назву об\'єкту'); return; }
+  if (currentObjectType !== '2' && !account) { showError('Вкажіть особовий рахунок'); return; }
+  if (!photos.length) { showError('Додайте хоча б одне фото'); return; }
+
+  // Оновлюємо координати безпосередньо перед відправкою.
+  // Оскільки watchPosition тримає чіп активним — відповідь приходить миттєво.
+  // Якщо GPS недоступний (вимкнений або заборонений) — помилка приходить
+  // одразу без очікування таймауту, відправка продовжується без затримки.
+  await new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        browserCoords = {
+          lat: +pos.coords.latitude.toFixed(7),
+          lon: +pos.coords.longitude.toFixed(7),
+          source: 'browser'
+        };
+        const acc = pos.coords.accuracy ? ` (±${Math.round(pos.coords.accuracy)} м)` : '';
+        setGpsStatus('ok', `GPS пристрою${acc}`);
+        document.getElementById('gps-coords').textContent =
+          `${browserCoords.lat}, ${browserCoords.lon}`;
+        resolve();
+      },
+      () => resolve(), // GPS недоступний — продовжуємо з тими координатами що є
+      { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
+    );
+  });
+
+  const coords = getBestCoords();
+
+  // Унікальний ID для захисту від подвійного надсилання
+  const submissionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  const payload = {
+    submissionId,
+    workerName,
+    objectName,
+    account,
+    abonentName: inputs.name.value.trim(),
+    locality:    inputs.locality.value.trim(),
+    street:      inputs.street.value.trim(),
+    building:    inputs.building.value.trim(),
+    apt:         inputs.apt.value.trim(),
+    note:        document.getElementById('f-note').value.trim(),
+    coords,
+    photos: photos.map(p => ({ name: p.name, base64: p.base64, mimeType: p.mimeType }))
+  };
+
+  if (!isOnline) {
+    try {
+      await addToQueue(payload);
+      await updateQueueBadge();
+      const n = await getQueueCount();
+      showSuccess(`Немає з'єднання. Збережено в чергу (${n} звітів). Буде відправлено автоматично.`);
+      resetForm();
+    } catch(e) {
+      showError(`Не вдалося зберегти в чергу: ${e.message}. Спробуйте ще раз.`);
+    }
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<div class="spinner"></div> Відправляю...';
+  progressEl.classList.add('visible');
+  progressFill.style.width = '10%';
+
+  try {
+    let prog = 10;
+    const iv = setInterval(() => {
+      prog = Math.min(prog + 4, 85);
+      progressFill.style.width = prog + '%';
+      progressText.textContent = `Завантаження ${photos.length} фото...`;
+    }, 400);
+
+    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+    clearInterval(iv);
+    progressFill.style.width = '100%';
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'Помилка сервера');
+
+    progressText.textContent = '✓ Готово!';
+    const coordsInfo = coords.source !== 'none'
+      ? ` Координати: ${data.coordsSource}.` : '';
+    showSuccess(`✓ Звіт відправлено! Збережено ${data.photoCount} фото.${coordsInfo}`);
+    resetForm();
+  } catch(err) {
+    // Якщо були онлайн під час відправки — сервер міг прийняти дані.
+    // Запитуємо користувача, щоб не створити дублікат автоматично.
+    if (isOnline) {
+      const addToQ = confirm(
+        `Помилка відправки: ${err.message}\n\n` +
+        `Увага! Сервер міг вже отримати дані.\n` +
+        `Додати в чергу для повторної відправки?\n\n` +
+        `(Натисніть "Скасування", якщо дані вже є в таблиці)`
+      );
+      if (addToQ) {
+        try {
+          await addToQueue(payload);
+          await updateQueueBadge();
+          showError(`Помилка: ${err.message}. Збережено в чергу — перевірте таблицю на дублікати.`);
+        } catch(e) {
+          showError(`Помилка відправки: ${err.message}. Перевірте таблицю вручну.`);
+        }
+      } else {
+        showError(`Помилка: ${err.message}. Перевірте таблицю — дані могли зберегтися.`);
+      }
+    } else {
+      // Офлайн — додаємо автоматично, це безпечно (submissionId захистить від дубліката)
+      try {
+        await addToQueue(payload);
+        await updateQueueBadge();
+        showError(`Немає з'єднання. Збережено в чергу — буде відправлено автоматично.`);
+      } catch(e) {
+        showError(`Помилка відправки: ${err.message}.`);
+      }
+    }
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Надіслати звіт`;
+    setTimeout(() => { progressEl.classList.remove('visible'); progressFill.style.width='0%'; }, 2500);
+  }
+}
+
+function showSuccess(msg) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'success';
+  statusMsg.style.display = 'block';
+  statusMsg.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function showError(msg) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'error';
+  statusMsg.style.display = 'block';
+  statusMsg.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function resetForm() {
+  document.getElementById('workerName').value = '';
+  document.getElementById('objectName').value = '';
+  document.getElementById('f-note').value = '';
+  applyObjectType('1');
+  FIELDS.forEach(f => {
+    inputs[f].value = '';
+    inputs[f].classList.remove('autofilled');
+    updateClearBtn(f);
+  });
+  photos = [];
+  renderPreviews();
+}
+
+// ════════════════════════════════════════════════════════
+// Очистити блок "Дані об'єкту"
+document.getElementById('clear-data-btn').addEventListener('click', () => {
+  const dataFields = ['account', 'name', 'locality', 'street', 'building', 'apt'];
+  dataFields.forEach(f => {
+    inputs[f].value = '';
+    inputs[f].classList.remove('autofilled');
+    updateClearBtn(f);
+  });
+  document.getElementById('f-note').value = '';
+  closeAll();
+});
+
+// PWA — реєстрація Service Worker
+// ════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator && window.location.hostname.includes('github.io')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
