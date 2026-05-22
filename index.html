@@ -453,7 +453,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbxCngXQNbB6vqiFNrkRWRhlg1-fAOg62LkDVkBsWczK99Kx9V15LprkM73woLejy2f_/exec'
+  ? 'https://script.google.com/macros/s/AKfycbzco0C57j11a4fzSBgKl3-TtHzTD-GEfsMzgOSeAVrlpvF_alboCLTMAV0F4eLKBQQq/exec'
   : '__SCRIPT_URL__';
 
 // Утиліта для оптимізації подій (захист від зависань UI)
@@ -1003,29 +1003,23 @@ function highlightItems(items, idx) {
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
 
 // Єдиний розумний обробник кліків для керування клавіатурою та списками
-// Глобальний обробник дотиків для коректної роботи клавіатури на мобільних пристроях
-['touchstart', 'mousedown'].forEach(evt => {
-  document.addEventListener(evt, e => {
-    const target = e.target;
-    
-    // 1. Якщо тапнули по самому полю вводу або хрестику - нічого не робимо (залишаємо фокус)
-    if (target.closest('.input-wrap') && !target.closest('.ac-dropdown')) {
-      return;
-    }
-    
-    // 2. Якщо тапнули по випадаючому списку - нічого не робимо ТУТ!
-    // Це запобігає негайному закриттю клавіатури і "стрибку" екрана ДО того, як спрацює вибір.
-    if (target.closest('.ac-dropdown')) {
-      return; 
-    }
-    
-    // 3. Якщо тапнули будь-де інше (між полями, на заголовки, на фон)
-    closeAll();
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-      active.blur(); // Миттєво знімаємо фокус і ховаємо клавіатуру
-    }
-  }, { passive: true });
+// Єдиний стабільний обробник для керування клавіатурою без стрибків екрана
+document.addEventListener('pointerdown', e => {
+  const target = e.target;
+  
+  // 1. Якщо натиснули всередині поля вводу або на сам список — нічого не чіпаємо
+  if (target.closest('.input-wrap') || target.closest('.ac-dropdown')) {
+    return;
+  }
+  
+  // 2. Якщо клавіатура відкрита, плавно закриваємо її
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    active.blur();
+  }
+  
+  // 3. Закриваємо випадаючі списки
+  closeAll();
 });
 
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
