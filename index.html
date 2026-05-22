@@ -1022,7 +1022,20 @@ function highlightItems(items, idx) {
   if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
 }
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
-document.addEventListener('click', e => { if (!e.target.closest('.input-wrap')) closeAll(); });
+['touchstart', 'mousedown'].forEach(evt => {
+  document.addEventListener(evt, e => {
+    // Если тап/клик произошел НЕ внутри блока с полем ввода
+    if (!e.target.closest('.input-wrap')) {
+      closeAll(); // Прячем все открытые списки
+      
+      // Находим текущий активный элемент (поле, в котором стоит курсор)
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        active.blur(); // Принудительно снимаем фокус -> клавиатура прячется
+      }
+    }
+  }, { passive: true });
+});
 
 // Закриваємо всі dropdown при фокусі на textarea "Примітка"
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
