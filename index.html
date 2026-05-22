@@ -97,6 +97,7 @@
   .field:last-child { margin-bottom: 0; }
 
   label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+.field label { pointer-events: none; } /* Запрещает ярлыкам перехватывать клики */
   label .req { color: var(--accent2); margin-left: 2px; }
 
   .input-wrap { position: relative; }
@@ -452,7 +453,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycby7LsTiDCHrkBN609UhmIaf0xWr-bEGe_9uPFGh4ug9LN2BJBg5Fq07q3agI8om3f82/exec'
+  ? 'https://script.google.com/macros/s/AKfycbyjEohYXwdfL10gs_QN5d-YNUw9qmjeG8KFrpShqrYAPwiy8S9mi44pZg6AZ2MSxr-2/exec'
   : '__SCRIPT_URL__';
 
 // Утиліта для оптимізації подій (захист від зависань UI)
@@ -1002,32 +1003,29 @@ function highlightItems(items, idx) {
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
 
 // Єдиний розумний обробник кліків для керування клавіатурою та списками
-document.addEventListener('click', e => {
-  const target = e.target;
-  
-  // 1. Якщо клікнули всередині поля вводу (наприклад, на сам input або кнопку очищення)
-  if (target.closest('.input-wrap') && !target.closest('.ac-dropdown')) {
-    return;
-  }
-  
-  // 2. Якщо клік відбувся всередині випадаючого списку
-  if (target.closest('.ac-dropdown')) {
-    // Перевіряємо, чи потрапили конкретно по рядку вибору (по елементу списку)
-    if (target.closest('.ac-item, .ac-item-simple')) {
-      return; // Вибір зробить функція selectRecord або select (вище)
+// Глобальний обробник дотиків для коректної роботи клавіатури на мобільних пристроях
+['touchstart', 'mousedown'].forEach(evt => {
+  document.addEventListener(evt, e => {
+    const target = e.target;
+    
+    // 1. Якщо тапнули по самому полю вводу або хрестику - нічого не робимо (залишаємо фокус)
+    if (target.closest('.input-wrap') && !target.closest('.ac-dropdown')) {
+      return;
     }
-    // Якщо промахнулися і тапнули між рядками чи на фон списку
+    
+    // 2. Якщо тапнули по випадаючому списку - нічого не робимо ТУТ!
+    // Це запобігає негайному закриттю клавіатури і "стрибку" екрана ДО того, як спрацює вибір.
+    if (target.closest('.ac-dropdown')) {
+      return; 
+    }
+    
+    // 3. Якщо тапнули будь-де інше (між полями, на заголовки, на фон)
     closeAll();
-    document.activeElement?.blur();
-    return;
-  }
-  
-  // 3. Клік будь-де (на пустому фоні, заголовку і т.д.)
-  closeAll();
-  const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-    active.blur(); 
-  }
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      active.blur(); // Миттєво знімаємо фокус і ховаємо клавіатуру
+    }
+  }, { passive: true });
 });
 
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
