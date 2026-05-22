@@ -452,7 +452,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbymzLI_goIWZR3UokGV0Gx_qJCk0HQ7dw7mnT74mr25YM7I2jk7bL8ARvh0wWmsUp0/exec'
+  ? 'https://script.google.com/macros/s/AKfycby7LsTiDCHrkBN609UhmIaf0xWr-bEGe_9uPFGh4ug9LN2BJBg5Fq07q3agI8om3f82/exec'
   : '__SCRIPT_URL__';
 
 // Утиліта для оптимізації подій (захист від зависань UI)
@@ -793,13 +793,7 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
         return `<div class="ac-item-simple" data-value="${esc(label)}" data-type="${esc(type)}">${hilite(label, q)}${badge}</div>`;
       }).join('');
       dd.querySelectorAll('.ac-item-simple').forEach(el => {
-        el.addEventListener('mousedown', e => { e.preventDefault(); select(el.dataset.value, el.dataset.type); });
-        let touchStartY = 0;
-        el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-        el.addEventListener('touchend', e => {
-          const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
-          if (diff < 8) { e.preventDefault(); select(el.dataset.value, el.dataset.type); }
-        });
+        el.addEventListener('click', e => { e.preventDefault(); select(el.dataset.value, el.dataset.type); });
       });
     }
     dd.classList.add('open');
@@ -809,7 +803,7 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     input.value = val;
     if (btn) btn.classList.add('visible');
     dd.classList.remove('open');
-    input.blur(); // Виправлення: ховаємо клавіатуру
+    input.blur(); // Знімаємо фокус (ховаємо клавіатуру)
     if (onSelect) onSelect(val, type);
   }
 
@@ -847,10 +841,6 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     btn.classList.remove('visible');
     if (inputId === 'objectName') applyObjectType('1');
     input.focus();
-  });
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest(`#wrap-${inputId === 'workerName' ? 'worker' : 'object'}`)) dd.classList.remove('open');
   });
 }
 
@@ -920,13 +910,7 @@ function renderDropdown(field, candidates, query) {
     }).join('');
     dd.innerHTML = html;
     dd.querySelectorAll('.ac-item-simple').forEach(el => {
-      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el, field); });
-      let touchStartY = 0;
-      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-      el.addEventListener('touchend', e => {
-        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
-        if (diff < 8) { e.preventDefault(); selectRecord(el, field); }
-      });
+      el.addEventListener('click', e => { e.preventDefault(); selectRecord(el, field); });
     });
   } else {
     const isT2 = currentObjectType === '2';
@@ -947,13 +931,7 @@ function renderDropdown(field, candidates, query) {
     }).join('');
     dd.innerHTML = html;
     dd.querySelectorAll('.ac-item').forEach(el => {
-      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el); });
-      let touchStartY = 0;
-      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-      el.addEventListener('touchend', e => {
-        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
-        if (diff < 8) { e.preventDefault(); selectRecord(el); }
-      });
+      el.addEventListener('click', e => { e.preventDefault(); selectRecord(el); });
     });
   }
   dd.classList.add('open');
@@ -982,7 +960,7 @@ function selectRecord(el, clickedField) {
     });
   }
   closeAll();
-  document.activeElement?.blur(); // Виправлення: ховаємо клавіатуру
+  document.activeElement?.blur(); // Знімаємо фокус (ховаємо клавіатуру)
 }
 
 const debouncedRender = debounce((field, q) => {
@@ -1022,32 +1000,37 @@ function highlightItems(items, idx) {
   if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
 }
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
-['touchstart', 'mousedown'].forEach(evt => {
-  document.addEventListener(evt, e => {
-    // Если тап/клик произошел НЕ внутри блока с полем ввода
-    if (!e.target.closest('.input-wrap')) {
-      closeAll(); // Прячем все открытые списки
-      
-      // Находим текущий активный элемент (поле, в котором стоит курсор)
-      const active = document.activeElement;
-      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-        active.blur(); // Принудительно снимаем фокус -> клавиатура прячется
-      }
+
+// Єдиний розумний обробник кліків для керування клавіатурою та списками
+document.addEventListener('click', e => {
+  const target = e.target;
+  
+  // 1. Якщо клікнули всередині поля вводу (наприклад, на сам input або кнопку очищення)
+  if (target.closest('.input-wrap') && !target.closest('.ac-dropdown')) {
+    return;
+  }
+  
+  // 2. Якщо клік відбувся всередині випадаючого списку
+  if (target.closest('.ac-dropdown')) {
+    // Перевіряємо, чи потрапили конкретно по рядку вибору (по елементу списку)
+    if (target.closest('.ac-item, .ac-item-simple')) {
+      return; // Вибір зробить функція selectRecord або select (вище)
     }
-  }, { passive: true });
+    // Якщо промахнулися і тапнули між рядками чи на фон списку
+    closeAll();
+    document.activeElement?.blur();
+    return;
+  }
+  
+  // 3. Клік будь-де (на пустому фоні, заголовку і т.д.)
+  closeAll();
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    active.blur(); 
+  }
 });
 
-// Закриваємо всі dropdown при фокусі на textarea "Примітка"
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
-
-// Виправлення: Свайп/клік по зоні списку, яка не є елементом, має ховати клавіатуру
-document.querySelectorAll('.ac-dropdown').forEach(dd => {
-  dd.addEventListener('touchstart', () => {
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-      document.activeElement.blur();
-    }
-  }, { passive: true });
-});
 
 document.querySelectorAll('.clear-btn').forEach(btn => {
   btn.addEventListener('click', () => {
