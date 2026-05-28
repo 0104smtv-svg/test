@@ -1,5 +1,9 @@
-const CACHE_NAME = 'fotozvit-v1';
-const ASSETS = [
+const CACHE_NAME = 'fotozvit-v2';
+
+// Файли оболонки. '/' та index.html — критичні для офлайн-запуску,
+// решта (манифест, іконки) — бажані, але їх відсутність не повинна
+// ламати встановлення Service Worker.
+const PRECACHE = [
   './',
   './index.html',
   './manifest.json',
@@ -7,50 +11,81 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Встановлення — кешуємо файли
+// ── Встановлення ──
+// Кешуємо по одному через allSettled: якщо якийсь файл (напр. іконка)
+// недоступний — встановлення НЕ падає, на відміну від cache.addAll().
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async cache => {
+      await Promise.allSettled(PRECACHE.map(url => cache.add(url)));
+      await self.skipWaiting();
+    })
   );
 });
 
-// Активація — видаляємо старий кеш
+// ── Активація — видаляємо старі версії кешу ──
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys
-        .filter(key => key !== CACHE_NAME)
-        .map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Запити — спочатку мережа, fallback на кеш
-// Запити до Apps Script завжди йдуть через мережу (не кешуються)
+// ── Запити ──
 self.addEventListener('fetch', e => {
-  const url = e.request.url;
+  const req = e.request;
 
-  // Запити до Google Script — тільки мережа
-  if (url.includes('script.google.com') || url.includes('googleapis.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response(
-      JSON.stringify({ status: 'error', message: 'Немає з\'єднання' }),
-      { headers: { 'Content-Type': 'application/json' } }
-    )));
+  // Кешувати можна лише GET (cache.put на POST кидає помилку).
+  if (req.method !== 'GET') return;
+
+  // Бэкенд Apps Script — тільки мережа, з зрозумілою заглушкою при офлайні.
+  // Умова звужена до script.google.com, щоб ВИПАДКОВО не ловити
+  // fonts.googleapis.com (раніше шрифт офлайн отримував JSON-помилку).
+  if (req.url.includes('script.google.com')) {
+    e.respondWith(
+      fetch(req).catch(() => new Response(
+        JSON.stringify({ status: 'error', message: 'Немає з\'єднання' }),
+        { headers: { 'Content-Type': 'application/json' } }
+      ))
+    );
     return;
   }
 
-  // Решта — мережа з fallback на кеш
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        // Оновлюємо кеш свіжою версією
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
-  );
+  // Решта (оболонка, статика, шрифти) — stale-while-revalidate:
+  // миттєво віддаємо з кешу, у фоні оновлюємо.
+  e.respondWith(staleWhileRevalidate(req));
 });
+
+async function staleWhileRevalidate(req) {
+  const cache  = await caches.open(CACHE_NAME);
+  const cached = await cache.match(req);
+
+  // Фонове оновлення кешу. Кешуємо лише успішні відповіді свого
+  // походження або CORS — щоб не зберігати помилки чи opaque-відповіді.
+  const network = fetch(req)
+    .then(res => {
+      if (res && res.ok && (res.type === 'basic' || res.type === 'cors')) {
+        cache.put(req, res.clone());
+      }
+      return res;
+    })
+    .catch(() => null);
+
+  // 1) є кеш — віддаємо одразу (мережа оновить його у фоні)
+  if (cached) return cached;
+
+  // 2) кешу немає — чекаємо мережу
+  const fresh = await network;
+  if (fresh) return fresh;
+
+  // 3) ні кешу, ні мережі: для навігації віддаємо оболонку
+  if (req.mode === 'navigate') {
+    const shell = await cache.match('./index.html');
+    if (shell) return shell;
+  }
+
+  return new Response('Офлайн', { status: 503, statusText: 'Offline' });
+}
