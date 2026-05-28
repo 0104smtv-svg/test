@@ -457,7 +457,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbxRj0AYzZWg25d7Ar4Gt8gcg4HRtuQTNKVCknzqZbJUX7kxMmUaJYQZAL2rrA4Wi91t/exec'
+  ? 'https://script.google.com/macros/s/AKfycbwRpuZKqwNu9GHVlEwN2pBDII7S_YWH8Nz4_2Q1KCuCPo3wPtoVq65eDVtTMD_jYX8r/exec'
   : '__SCRIPT_URL__';
 
 // ════════════════════════════════════════════════════════
@@ -1028,10 +1028,10 @@ FIELDS.forEach(field => {
     renderDropdown(field, candidates, q);
   });
   input.addEventListener('focus', () => {
-    closeAll(); // закриваємо всі інші dropdown перед відкриттям свого
-    if (!dictReady) return;
-    const candidates = getCandidates(field, input.value.trim());
-    if (candidates.length) renderDropdown(field, candidates, input.value.trim());
+    // Тільки закриваємо чужі списки. Свій НЕ відкриваємо автоматично:
+    // після вибору запису всі поля заповнені, і випадковий тап по полю/лейблу
+    // відкривав би сусідній список. Список з'являється під час вводу тексту.
+    closeAll();
   });
   input.addEventListener('keydown', e => {
     const dd = dropdowns[field];
@@ -1049,7 +1049,15 @@ function highlightItems(items, idx) {
   if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
 }
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
-document.addEventListener('click', e => { if (!e.target.closest('.input-wrap')) closeAll(); });
+document.addEventListener('click', e => {
+  if (e.target.closest('.input-wrap')) return;
+  closeAll();
+  // Тап поза полями ховає клавіатуру (мобільні браузери не роблять це самі).
+  // Сам інпут виключений умовою вище, тож редагування не переривається.
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+});
 
 // Закриваємо всі dropdown при фокусі на textarea "Примітка"
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
