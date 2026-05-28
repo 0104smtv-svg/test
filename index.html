@@ -96,14 +96,7 @@
   .field { margin-bottom: 16px; position: relative; }
   .field:last-child { margin-bottom: 0; }
 
-  label { 
-  display: inline-block; 
-  pointer-events: none; /* Делает текст и пространство некликабельным */
-  font-size: 13px; 
-  font-weight: 500; 
-  color: var(--text2); 
-  margin-bottom: 6px; 
-}
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
   label .req { color: var(--accent2); margin-left: 2px; }
 
   .input-wrap { position: relative; }
@@ -464,7 +457,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbxSEuOlA4_YTFExywB-f1cg-PFN0ceTkhCQcLqNtNzwK4KA3HqIq3_k4QYgkrAGt5YP/exec'
+  ? 'https://script.google.com/macros/s/AKfycbzucwn692rxZBBtf8Wcb43BQOHF-D0jSDHKbP3CPP9Xn9CQYXboTpi4VCEPRjvWllQ2/exec'
   : '__SCRIPT_URL__';
 
 // ════════════════════════════════════════════════════════
@@ -842,7 +835,6 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     if (btn) btn.classList.add('visible');
     dd.classList.remove('open');
     if (onSelect) onSelect(val, type);
-    input.blur();
   }
 
   function filter(q) {
@@ -1022,7 +1014,6 @@ function selectRecord(el, clickedField) {
     });
   }
   closeAll();
-  document.activeElement.blur();
 }
 
 FIELDS.forEach(field => {
