@@ -15,18 +15,18 @@
   @import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg: #f0f4f8;           
-    --surface: #ffffff;      
-    --surface2: #dce3f0;     
-    --border: #d0d8e8;       
-    --accent: #2563eb;       
-    --accent2: #3b7ff5;      
-    --success: #16a34a;      
-    --error: #dc2626;        
-    --warning: #d97706;      
-    --text: #1e2a3a;         
-    --text2: #4a5568;        
-    --text3: #718096;        
+    --bg: #f0f4f8;           /* Світлий фон сторінки */
+    --surface: #ffffff;      /* Білі картки/блоки */
+    --surface2: #dce3f0;     /* Вкладені елементи */
+    --border: #d0d8e8;       /* Рамки */
+    --accent: #2563eb;       /* Основний акцент */
+    --accent2: #3b7ff5;      /* Світліший акцент */
+    --success: #16a34a;      /* Зелений */
+    --error: #dc2626;        /* Червоний */
+    --warning: #d97706;      /* Жовтий */
+    --text: #1e2a3a;         /* Основний текст */
+    --text2: #4a5568;        /* Другорядний текст */
+    --text3: #718096;        /* Підказки, плейсхолдери */
     --radius: 12px;
     --font: 'Geologica', sans-serif;
   }
@@ -37,7 +37,7 @@
     font-family: var(--font);
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100dvh;
     padding-bottom: 40px;
   }
 
@@ -97,7 +97,7 @@
   .field:last-child { margin-bottom: 0; }
 
   label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
-  .field label { pointer-events: none; } 
+  label .req { color: var(--accent2); margin-left: 2px; }
 
   .input-wrap { position: relative; }
   .input-wrap .clear-btn {
@@ -124,7 +124,7 @@
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 8px; max-height: 260px; overflow-y: auto;
     z-index: 300; display: none;
-    box-shadow: 0 8px 32px rgba(0,0,0,.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
@@ -166,6 +166,7 @@
 
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+  /* GPS індикатор */
   #gps-status {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 13px; border-radius: 8px;
@@ -188,6 +189,7 @@
   }
   #gps-retry.visible { display: block; }
 
+  /* Фото */
   .photo-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .btn-photo {
     padding: 14px 10px; border-radius: 8px; border: 1px solid var(--border);
@@ -225,6 +227,7 @@
   }
   #no-photo-hint { font-size: 13px; color: var(--text3); text-align: center; padding: 12px 0; }
 
+  /* Submit */
   #submit-btn {
     width: 100%; padding: 16px;
     background: var(--accent); color: #fff; border: none; border-radius: 10px;
@@ -297,6 +300,7 @@
 
 <main>
 
+  <!-- Працівник -->
   <div class="section">
     <div class="section-title">Працівник</div>
     <div class="field">
@@ -309,6 +313,7 @@
     </div>
   </div>
 
+  <!-- Об'єкт -->
   <div class="section">
     <div class="section-title">Об'єкт</div>
     <div class="field">
@@ -321,6 +326,7 @@
     </div>
   </div>
 
+  <!-- Дані об'єкту -->
   <div class="section">
     <div class="section-title">Дані об'єкту</div>
 
@@ -394,6 +400,7 @@
     </button>
   </div>
 
+  <!-- Координати -->
   <div class="section">
     <div class="section-title">Геолокація</div>
     <div id="gps-status">
@@ -404,6 +411,7 @@
     <div id="gps-coords"></div>
   </div>
 
+  <!-- Фото -->
   <div class="section">
     <div class="section-title">Фото<span class="req" style="margin-left:4px">*</span></div>
     <div class="photo-buttons">
@@ -445,28 +453,26 @@
 </main>
 
 <script>
+// ══════════════════════════════════════════
+// URL визначається автоматично (Apps Script)
+// ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbzl4BKG3yH-ejVmv3qVuqQnc7jfrlva9-20aFiFB_ym_qkloNI1iyDwy0H8h9F3DkpI/exec'
+  ? 'https://script.google.com/macros/s/AKfycbxRj0AYzZWg25d7Ar4Gt8gcg4HRtuQTNKVCknzqZbJUX7kxMmUaJYQZAL2rrA4Wi91t/exec'
   : '__SCRIPT_URL__';
 
-function debounce(func, wait) {
-  let timeout;
-  return function(...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
-}
-
+// ════════════════════════════════════════════════════════
+// EXIF — зчитування GPS з метаданих JPEG
+// ════════════════════════════════════════════════════════
 function readExifGPS(arrayBuffer) {
   try {
     const view = new DataView(arrayBuffer);
-    if (view.getUint16(0) !== 0xFFD8) return null;
+    if (view.getUint16(0) !== 0xFFD8) return null; // не JPEG
 
     let offset = 2;
     while (offset < view.byteLength - 2) {
       const marker = view.getUint16(offset);
       offset += 2;
-      if (marker === 0xFFE1) {
+      if (marker === 0xFFE1) { // APP1 (EXIF)
         const len = view.getUint16(offset);
         const exifHeader = String.fromCharCode(
           view.getUint8(offset+2), view.getUint8(offset+3),
@@ -486,30 +492,36 @@ function readExifGPS(arrayBuffer) {
 
 function parseExifGPS(view, start, len) {
   try {
+    // Визначаємо порядок байт
     const byteOrder = view.getUint16(start);
-    const le = (byteOrder === 0x4949);
+    const le = (byteOrder === 0x4949); // little-endian
     const getU16 = (o) => view.getUint16(start + o, le);
     const getU32 = (o) => view.getUint32(start + o, le);
+    const getI32 = (o) => view.getInt32(start + o, le);
 
     if (getU16(2) !== 0x002A) return null;
     let ifdOffset = getU32(4);
 
+    // Шукаємо IFD0 → GPS IFD
     let gpsOffset = null;
     let count = getU16(ifdOffset);
     for (let i = 0; i < count; i++) {
       const tag = getU16(ifdOffset + 2 + i * 12);
-      if (tag === 0x8825) {
+      if (tag === 0x8825) { // GPSInfo
         gpsOffset = getU32(ifdOffset + 2 + i * 12 + 8);
         break;
       }
     }
     if (!gpsOffset) return null;
 
+    // Читаємо GPS IFD
     const gps = {};
     count = getU16(gpsOffset);
     for (let i = 0; i < count; i++) {
       const base = gpsOffset + 2 + i * 12;
       const tag  = getU16(base);
+      const type = getU16(base + 2);
+      const cnt  = getU32(base + 4);
       const valOffset = getU32(base + 8);
 
       if (tag === 1) gps.latRef  = String.fromCharCode(view.getUint8(start + base + 8));
@@ -544,9 +556,12 @@ function dms2dec([d, m, s]) {
   return d + m / 60 + s / 3600;
 }
 
-let browserCoords = null; 
-let geoWatchId    = null; 
-let lastGpsUpdate = null; 
+// ════════════════════════════════════════════════════════
+// ГЕОЛОКАЦІЯ ПРИСТРОЮ
+// ════════════════════════════════════════════════════════
+let browserCoords = null; // {lat, lon, source:'browser'} або null
+let geoWatchId    = null; // ID відстеження watchPosition
+let lastGpsUpdate = null; // час останнього оновлення координат від watchPosition
 
 function startGeolocation() {
   setGpsStatus('loading', 'Визначення координат...');
@@ -554,14 +569,18 @@ function startGeolocation() {
 
   if (!navigator.geolocation) {
     setGpsStatus('error', 'Геолокація не підтримується браузером');
+    document.getElementById('gps-retry').classList.remove('visible');
     return;
   }
 
+  // Зупиняємо попереднє відстеження якщо було (напр. при натисканні "Повторити")
   if (geoWatchId !== null) {
     navigator.geolocation.clearWatch(geoWatchId);
     geoWatchId = null;
   }
 
+  // watchPosition — тримає GPS чіп активним і оновлює координати постійно.
+  // Завдяки цьому getCurrentPosition при відправці отримує свіжі дані миттєво.
   geoWatchId = navigator.geolocation.watchPosition(
     pos => {
       browserCoords = {
@@ -569,15 +588,20 @@ function startGeolocation() {
         lon: +pos.coords.longitude.toFixed(7),
         source: 'browser'
       };
-      lastGpsUpdate = Date.now(); 
+      lastGpsUpdate = Date.now(); // фіксуємо час останнього оновлення
       const acc = pos.coords.accuracy ? ` (±${Math.round(pos.coords.accuracy)} м)` : '';
       setGpsStatus('ok', `GPS пристрою${acc}`);
-      document.getElementById('gps-coords').textContent = `${browserCoords.lat}, ${browserCoords.lon}`;
+      document.getElementById('gps-coords').textContent =
+        `${browserCoords.lat}, ${browserCoords.lon}`;
       document.getElementById('gps-retry').classList.remove('visible');
     },
     err => {
       browserCoords = null;
-      const msgs = { 1: 'Доступ до геолокації заборенено', 2: 'Координати недоступні', 3: 'Час очікування вичерпано' };
+      const msgs = {
+        1: 'Доступ до геолокації заборонено',
+        2: 'Координати недоступні',
+        3: 'Час очікування вичерпано'
+      };
       setGpsStatus('error', msgs[err.code] || 'Помилка геолокації');
       document.getElementById('gps-retry').classList.add('visible');
       document.getElementById('gps-coords').textContent = '';
@@ -596,6 +620,10 @@ function setGpsStatus(state, text) {
 document.getElementById('gps-retry').addEventListener('click', startGeolocation);
 startGeolocation();
 
+// ── Таймер перевірки свіжості GPS ──
+// watchPosition на Android не завжди викликає error callback при вимкненні GPS —
+// він просто мовчить. Таймер виявляє це і оновлює індикатор.
+// Спрацьовує кожні 10 секунд, поріг втрати сигналу — 15 секунд.
 setInterval(() => {
   if (lastGpsUpdate && Date.now() - lastGpsUpdate > 15000) {
     browserCoords = null;
@@ -607,16 +635,30 @@ setInterval(() => {
 }, 10000);
 
 const CACHE_KEY     = 'fotozvit_dict_v1';
-const CACHE_TTL_MS  = 60 * 60 * 1000; 
+const CACHE_TTL_MS  = 60 * 60 * 1000; // 1 година — після цього оновлюємо у фоні
 
+// ════════════════════════════════════════════════════════
+// JsonP — завантаження без CORS обмежень
+// ════════════════════════════════════════════════════════
 function fetchJsonP(url) {
   return new Promise((resolve, reject) => {
     const cbName = '_cb_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
-    const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 15000);
+    const timer  = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 15000);
 
-    window[cbName] = function(data) { cleanup(); resolve(data); };
-    function cleanup() { clearTimeout(timer); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
 
     script.onerror = () => { cleanup(); reject(new Error('Script error')); };
     script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
@@ -624,6 +666,9 @@ function fetchJsonP(url) {
   });
 }
 
+// ════════════════════════════════════════════════════════
+// ДОВІДНИК — кеш + завантаження
+// ════════════════════════════════════════════════════════
 let DB        = [];
 let workersDB = [];
 let objectsDB = [];
@@ -645,7 +690,11 @@ function loadFromCache() {
 }
 
 function saveToCache(abonents, workers, objects) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), abonents, workers, objects })); } catch(e) {}
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      ts: Date.now(), abonents, workers, objects
+    }));
+  } catch(e) {}
 }
 
 function setDictStatus(state, text) {
@@ -673,17 +722,23 @@ async function fetchAllDicts() {
 
 async function loadDict() {
   const cached = loadFromCache();
+
   if (cached && cached.fresh) {
+    // Кеш свіжий — показуємо одразу, оновлюємо у фоні
     dictReady = true;
     setDictStatus('ok', `Довідник: ${DB.length} абонентів (кеш)`);
     initSimpleAC();
+    // Фонове оновлення
     fetchAllDicts().then(() => {
-      setTimeout(() => { setDictStatus('ok', `${DB.length} абонентів у довіднику`); }, 3000);
+      setTimeout(() => {
+        setDictStatus('ok', `${DB.length} абонентів у довіднику`);
+      }, 3000);
     }).catch(() => {});
     return;
   }
 
   if (cached) {
+    // Кеш застарів — показуємо старий поки завантажуємо новий
     dictReady = true;
     setDictStatus('loading', `Оновлення довідника...`);
     initSimpleAC();
@@ -695,10 +750,13 @@ async function loadDict() {
     await fetchAllDicts();
     dictReady = true;
     setDictStatus('ok', `Довідник: ${DB.length} абонентів`);
-    setTimeout(() => { setDictStatus('ok', `${DB.length} абонентів у довіднику`); }, 3000);
+    setTimeout(() => {
+      setDictStatus('ok', `${DB.length} абонентів у довіднику`);
+    }, 3000);
     initSimpleAC();
   } catch(err) {
     if (dictReady) {
+      // Є кеш — продовжуємо з ним
       setDictStatus('ok', `Довідник: ${DB.length} абонентів (офлайн)`);
     } else {
       setDictStatus('error', 'Помилка завантаження довідника');
@@ -708,12 +766,17 @@ async function loadDict() {
 
 loadDict();
 
+
+// ════════════════════════════════════════════════════════
+// РЕЖИМ ФОРМИ залежно від типу об'єкту
+// ════════════════════════════════════════════════════════
 let currentObjectType = '1';
 
 function applyObjectType(type) {
   currentObjectType = type;
   const isType2 = type === '2';
 
+  // Поля які приховуються при типі 2
   const hideFields = ['account', 'name', 'apt'];
   hideFields.forEach(f => {
     const field = inputs[f] ? inputs[f].closest('.field') : null;
@@ -727,10 +790,14 @@ function applyObjectType(type) {
     }
   });
 
+  // Прибираємо обов'язковість з особ. рах. при типі 2
   const accountLabel = document.querySelector('label[for="f-account"] .req');
   if (accountLabel) accountLabel.style.display = isType2 ? 'none' : '';
 }
 
+// ════════════════════════════════════════════════════════
+// АВТОДОПОВНЕННЯ ДЛЯ ПРОСТИХ ПОЛІВ (працівник, об'єкт)
+// ════════════════════════════════════════════════════════
 function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
   const input = document.getElementById(inputId);
   const dd    = document.getElementById(dropdownId);
@@ -742,14 +809,22 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     if (!list.length) {
       dd.innerHTML = '<div class="ac-empty">Нічого не знайдено</div>';
     } else {
+      // list може бути масив рядків або масив {name, type}
       dd.innerHTML = list.slice(0, 20).map(item => {
         const label = typeof item === 'object' ? item.name : item;
         const type  = typeof item === 'object' ? item.type : '';
-        const badge = type === '2' ? ' <span style="font-size:10px;opacity:.5;margin-left:4px">[2]</span>' : '';
+        const badge = type === '2'
+          ? ' <span style="font-size:10px;opacity:.5;margin-left:4px">[2]</span>' : '';
         return `<div class="ac-item-simple" data-value="${esc(label)}" data-type="${esc(type)}">${hilite(label, q)}${badge}</div>`;
       }).join('');
       dd.querySelectorAll('.ac-item-simple').forEach(el => {
-        el.addEventListener('click', e => { e.preventDefault(); select(el.dataset.value, el.dataset.type); });
+        el.addEventListener('mousedown', e => { e.preventDefault(); select(el.dataset.value, el.dataset.type); });
+        let touchStartY = 0;
+        el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+        el.addEventListener('touchend', e => {
+          const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+          if (diff < 8) { e.preventDefault(); select(el.dataset.value, el.dataset.type); }
+        });
       });
     }
     dd.classList.add('open');
@@ -758,13 +833,7 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
   function select(val, type) {
     input.value = val;
     if (btn) btn.classList.add('visible');
-    
-    // СТАБИЛИЗАЦИЯ КЛАВИАТУРЫ: Сначала убираем фокус, списки закроем чуть позже
-    input.blur(); 
-    setTimeout(() => {
-      dd.classList.remove('open');
-    }, 120);
-
+    dd.classList.remove('open');
     if (onSelect) onSelect(val, type);
   }
 
@@ -781,24 +850,13 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     else dd.classList.remove('open');
   }
 
-  const debouncedFilter = debounce((q) => filter(q), 250);
-
   input.addEventListener('input', () => {
     if (btn) btn.classList.toggle('visible', !!input.value);
+    // Якщо поле очищено — скидаємо тип об'єкту
     if (!input.value && inputId === 'objectName') applyObjectType('1');
-    debouncedFilter(input.value.trim());
+    filter(input.value.trim());
   });
-
-  // ИСКЛЮЧЕНИЕ ПРЫЖКОВ: Даем клавиатуре начать открываться, затем строим список и мягко скроллим
-  input.addEventListener('focus', () => { 
-    closeAll(); 
-    setTimeout(() => {
-      if (document.activeElement !== input) return;
-      filter(input.value.trim());
-      input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 180);
-  });
-
+  input.addEventListener('focus', () => { closeAll(); filter(input.value.trim()); });
   input.addEventListener('keydown', e => {
     const items = dd.querySelectorAll('.ac-item-simple');
     if (!items.length || !dd.classList.contains('open')) return;
@@ -807,21 +865,27 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); select(items[idx].dataset.value, items[idx].dataset.type); }
     if (e.key === 'Escape') dd.classList.remove('open');
   });
-
   if (btn) btn.addEventListener('click', () => {
     input.value = '';
     btn.classList.remove('visible');
     if (inputId === 'objectName') applyObjectType('1');
     input.focus();
   });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest(`#wrap-${inputId === 'workerName' ? 'worker' : 'object'}`)) dd.classList.remove('open');
+  });
 }
 
+// Ініціалізація AC для працівника та об'єкту
+// Викликається після завантаження довідника (з loadDict або з кешу)
 function initSimpleAC() {
   setupSimpleAC('workerName', 'dd-worker', () => workersDB);
   setupSimpleAC('objectName', 'dd-object', () => objectsDB, (val, type) => {
     applyObjectType(type || '1');
   });
 }
+
 
 const FIELDS = ['account','name','locality','street','building','apt'];
 const inputs = {}, dropdowns = {};
@@ -863,13 +927,16 @@ function renderDropdown(field, candidates, query) {
   const dd = dropdowns[field];
   acIndex[field] = -1;
 
+  // Поля які показують тільки своє значення (не повний запис)
   const simpleFields = ['locality', 'street', 'building', 'apt'];
 
   if (!candidates.length) {
     dd.innerHTML = '<div class="ac-empty">Нічого не знайдено</div>';
   } else if (simpleFields.includes(field)) {
+    // Показуємо тільки унікальні значення поля
     const shown = candidates.slice(0, 20);
-    let html = candidates.length > 20 ? `<div class="ac-count">Показано 20 з ${candidates.length} — уточніть запит</div>` : '';
+    let html = candidates.length > 20
+      ? `<div class="ac-count">Показано 20 з ${candidates.length} — уточніть запит</div>` : '';
     html += shown.map(rec => {
       const val = rec[field];
       return `<div class="ac-item-simple"
@@ -881,14 +948,23 @@ function renderDropdown(field, candidates, query) {
     }).join('');
     dd.innerHTML = html;
     dd.querySelectorAll('.ac-item-simple').forEach(el => {
-      el.addEventListener('click', e => { e.preventDefault(); selectRecord(el, field); });
+      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el, field); });
+      let touchStartY = 0;
+      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (diff < 8) { e.preventDefault(); selectRecord(el, field); }
+      });
     });
   } else {
+    // Для account і name — повний запис як раніше
     const isT2 = currentObjectType === '2';
     const shown = candidates.slice(0, 15);
-    let html = candidates.length > 15 ? `<div class="ac-count">Показано 15 з ${candidates.length} — уточніть запит</div>` : '';
+    let html = candidates.length > 15
+      ? `<div class="ac-count">Показано 15 з ${candidates.length} — уточніть запит</div>` : '';
     html += shown.map(rec => {
-      const addr = [rec.locality, rec.street, rec.building, !isT2 && rec.apt ? 'кв.'+rec.apt : ''].filter(Boolean).join(', ');
+      const addr = [rec.locality, rec.street, rec.building,
+        !isT2 && rec.apt ? 'кв.'+rec.apt : ''].filter(Boolean).join(', ');
       return `<div class="ac-item"
         data-account="${esc(rec.account)}" data-name="${esc(rec.name)}"
         data-locality="${esc(rec.locality)}" data-street="${esc(rec.street)}"
@@ -900,7 +976,13 @@ function renderDropdown(field, candidates, query) {
     }).join('');
     dd.innerHTML = html;
     dd.querySelectorAll('.ac-item').forEach(el => {
-      el.addEventListener('click', e => { e.preventDefault(); selectRecord(el); });
+      el.addEventListener('mousedown', e => { e.preventDefault(); selectRecord(el); });
+      let touchStartY = 0;
+      el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (diff < 8) { e.preventDefault(); selectRecord(el); }
+      });
     });
   }
   dd.classList.add('open');
@@ -908,6 +990,7 @@ function renderDropdown(field, candidates, query) {
 
 function closeAll() {
   FIELDS.forEach(f => { dropdowns[f].classList.remove('open'); acIndex[f] = -1; });
+  // Закриваємо також dropdown для Працівник і Об'єкт
   document.getElementById('dd-worker').classList.remove('open');
   document.getElementById('dd-object').classList.remove('open');
 }
@@ -916,11 +999,13 @@ const simpleFields = new Set(['locality', 'street', 'building', 'apt']);
 
 function selectRecord(el, clickedField) {
   if (clickedField && simpleFields.has(clickedField)) {
+    // Заповнюємо тільки вибране поле
     const val = el.dataset[clickedField] || '';
     inputs[clickedField].value = val;
     inputs[clickedField].classList.toggle('autofilled', !!val);
     updateClearBtn(clickedField);
   } else {
+    // Заповнюємо всі поля (вибір по рахунку або імені)
     FIELDS.forEach(f => {
       const val = el.dataset[f] || '';
       inputs[f].value = val;
@@ -928,19 +1013,8 @@ function selectRecord(el, clickedField) {
       updateClearBtn(f);
     });
   }
-  
-  // УСТРАНЕНИЕ ПРЫЖКА ПРИ ВЫБОРЕ: Сначала убираем клавиатуру, списки скрываем через 120мс
-  if (document.activeElement) {
-    document.activeElement.blur();
-  }
-  setTimeout(closeAll, 120);
+  closeAll();
 }
-
-const debouncedRender = debounce((field, q) => {
-  const candidates = getCandidates(field, q);
-  if (!q && !hasOtherFilters(field)) { closeAll(); return; }
-  renderDropdown(field, candidates, q);
-}, 250);
 
 FIELDS.forEach(field => {
   const input = inputs[field];
@@ -949,23 +1023,16 @@ FIELDS.forEach(field => {
     input.classList.remove('autofilled');
     updateClearBtn(field);
     const q = input.value.trim();
-    debouncedRender(field, q);
+    const candidates = getCandidates(field, q);
+    if (!q && !hasOtherFilters(field)) { closeAll(); return; }
+    renderDropdown(field, candidates, q);
   });
-
-  // УСТРАНЕНИЕ ПРЫЖКА ПРИ ФОКУСЕ: Рендерим выпадающий список только после того, как клавиатура начнет выезжать
   input.addEventListener('focus', () => {
-    closeAll(); 
+    closeAll(); // закриваємо всі інші dropdown перед відкриттям свого
     if (!dictReady) return;
-    setTimeout(() => {
-      if (document.activeElement !== input) return;
-      const candidates = getCandidates(field, input.value.trim());
-      if (candidates.length) {
-        renderDropdown(field, candidates, input.value.trim());
-        input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 180);
+    const candidates = getCandidates(field, input.value.trim());
+    if (candidates.length) renderDropdown(field, candidates, input.value.trim());
   });
-
   input.addEventListener('keydown', e => {
     const dd = dropdowns[field];
     const items = dd.querySelectorAll('.ac-item');
@@ -982,23 +1049,9 @@ function highlightItems(items, idx) {
   if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
 }
 function hasOtherFilters(field) { return FIELDS.some(f => f !== field && inputs[f].value.trim()); }
+document.addEventListener('click', e => { if (!e.target.closest('.input-wrap')) closeAll(); });
 
-// Глобальный обработчик Pointerdown для закрытия клавиатуры без прыжков
-document.addEventListener('pointerdown', e => {
-  const target = e.target;
-  
-  if (target.closest('.input-wrap') || target.closest('.ac-dropdown')) {
-    return;
-  }
-  
-  const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-    active.blur();
-  }
-  
-  setTimeout(closeAll, 120);
-});
-
+// Закриваємо всі dropdown при фокусі на textarea "Примітка"
 document.getElementById('f-note').addEventListener('focus', () => closeAll());
 
 document.querySelectorAll('.clear-btn').forEach(btn => {
@@ -1025,51 +1078,55 @@ function hilite(text, q) {
   return esc(text.slice(0,i)) + '<mark>' + esc(text.slice(i,i+q.length)) + '</mark>' + esc(text.slice(i+q.length));
 }
 
-let photos = []; 
+// ════════════════════════════════════════════════════════
+// ФОТО + EXIF GPS
+// ════════════════════════════════════════════════════════
+let photos = []; // [{name, base64, mimeType, previewUrl, coords}]
+
 const previewsEl  = document.getElementById('previews');
 const noPhotoHint = document.getElementById('no-photo-hint');
 
 document.getElementById('camera-input').addEventListener('change',  e => addFiles(e.target.files));
 document.getElementById('gallery-input').addEventListener('change', e => addFiles(e.target.files));
 
-const MAX_SIZE = 1920;  
-const JPEG_Q   = 0.82;  
+const MAX_SIZE = 1920;  // px по довшій стороні
+const JPEG_Q   = 0.82;  // якість JPEG
 
 function addFiles(files) {
   Array.from(files).forEach(async file => {
     if (!file.type.startsWith('image/')) return;
-    try {
-      const arrBuf     = await file.arrayBuffer();
-      const exifCoords = readExifGPS(arrBuf);
-      const origKb     = Math.round(file.size / 1024);
-      const compressed = await compressImage(file);
 
-      photos.push({
-        name:       file.name,
-        base64:     compressed.base64,
-        mimeType:   'image/jpeg',
-        previewUrl: compressed.dataUrl,
-        coords:     exifCoords,
-        origKb,
-        sizeKb:     compressed.sizeKb
-      });
-      renderPreviews();
-    } catch (err) {
-      console.error(err);
-      alert('Не вдалося обробити фото: ' + file.name + '\n' + err.message);
-    }
+    // Зчитуємо EXIF до стиснення (canvas видаляє метадані)
+    const arrBuf     = await file.arrayBuffer();
+    const exifCoords = readExifGPS(arrBuf);
+    const origKb     = Math.round(file.size / 1024);
+
+    // Стискаємо через canvas
+    const compressed = await compressImage(file);
+    if (!compressed) return; // пошкоджений/нечитабельний файл — пропускаємо
+
+    photos.push({
+      name:       file.name,
+      base64:     compressed.base64,
+      mimeType:   'image/jpeg',
+      previewUrl: compressed.dataUrl,
+      coords:     exifCoords,
+      origKb,
+      sizeKb:     compressed.sizeKb
+    });
+    renderPreviews();
   });
   document.getElementById('camera-input').value  = '';
   document.getElementById('gallery-input').value = '';
 }
 
 function compressImage(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Помилка читання файлу"));
+    reader.onerror = () => resolve(null); // не вдалося прочитати файл
     reader.onload = evt => {
       const img = new Image();
-      img.onerror = () => reject(new Error("Помилка дешифрування зображення"));
+      img.onerror = () => resolve(null); // пошкоджене/непідтримуване зображення
       img.onload = () => {
         let w = img.width, h = img.height;
         if (w > MAX_SIZE || h > MAX_SIZE) {
@@ -1090,7 +1147,9 @@ function compressImage(file) {
   });
 }
 
-function fmtKb(kb) { return kb < 1024 ? kb + ' КБ' : (kb / 1024).toFixed(1) + ' МБ'; }
+function fmtKb(kb) {
+  return kb < 1024 ? kb + ' КБ' : (kb / 1024).toFixed(1) + ' МБ';
+}
 
 function renderPreviews() {
   noPhotoHint.style.display = photos.length ? 'none' : 'block';
@@ -1107,12 +1166,23 @@ function renderPreviews() {
   });
 }
 
+// ════════════════════════════════════════════════════════
+// ВИЗНАЧЕННЯ КООРДИНАТ ДЛЯ ЗАПИСУ
+// Пріоритет: EXIF першого фото → геолокація браузера
+// ════════════════════════════════════════════════════════
 function getBestCoords() {
-  for (const p of photos) { if (p.coords) return p.coords; }
+  // Спочатку шукаємо EXIF у будь-якому фото
+  for (const p of photos) {
+    if (p.coords) return p.coords;
+  }
+  // Fallback: GPS пристрою
   if (browserCoords) return browserCoords;
   return { lat: '', lon: '', source: 'none' };
 }
 
+// ════════════════════════════════════════════════════════
+// ОФЛАЙН / ЧЕРГА — IndexedDB (без обмежень розміру)
+// ════════════════════════════════════════════════════════
 let isOnline = navigator.onLine;
 const offlineBanner = document.getElementById('offline-banner');
 const queueBadge   = document.getElementById('queue-badge');
@@ -1120,6 +1190,7 @@ const DB_NAME    = 'fotozvit_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'queue';
 
+// ── Відкрити IndexedDB ──
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -1134,6 +1205,7 @@ function openDB() {
   });
 }
 
+// ── Додати запис в чергу ──
 async function addToQueue(payload) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1145,6 +1217,7 @@ async function addToQueue(payload) {
   });
 }
 
+// ── Отримати всі записи ──
 async function getAllFromQueue() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1156,6 +1229,7 @@ async function getAllFromQueue() {
   });
 }
 
+// ── Видалити запис ──
 async function removeFromQueue(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1167,6 +1241,7 @@ async function removeFromQueue(id) {
   });
 }
 
+// ── Кількість записів ──
 async function getQueueCount() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1183,15 +1258,21 @@ async function updateQueueBadge() {
     const n = await getQueueCount();
     queueBadge.textContent = n + ' в черзі';
     queueBadge.classList.toggle('visible', n > 0);
-  } catch(e) { queueBadge.classList.remove('visible'); }
+  } catch(e) {
+    queueBadge.classList.remove('visible');
+  }
 }
 
+// ── Захист від паралельних викликів flush ──
 let isFlushing = false;
 
 function updateOnlineStatus() {
   isOnline = navigator.onLine;
   offlineBanner.classList.toggle('visible', !isOnline);
-  if (isOnline) { setTimeout(tryFlushQueue, 2000); }
+  if (isOnline) {
+    // Затримка 2с при завантаженні сторінки — уникаємо гонки з ініціалізацією
+    setTimeout(tryFlushQueue, 2000);
+  }
 }
 window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
@@ -1210,19 +1291,28 @@ async function tryFlushQueue() {
     if (!queue.length) return;
     for (const item of queue) {
       try {
-        const r = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(item.payload) });
+        const r = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(item.payload)
+        });
         if (r.ok) {
           const data = await r.json();
+          // Видаляємо з черги і при успіху, і при дублікаті (сервер вже має ці дані)
           if (data.status === 'ok') await removeFromQueue(item.id);
         }
-      } catch(e) {}
+      } catch(e) { /* залишаємо в черзі — мережа ще недоступна */ }
     }
-  } catch(e) { console.log('Flush queue error:', e); } finally {
+  } catch(e) {
+    console.log('Flush queue error:', e);
+  } finally {
     isFlushing = false;
     await updateQueueBadge();
   }
 }
 
+// ════════════════════════════════════════════════════════
+// ВІДПРАВКА
+// ════════════════════════════════════════════════════════
 const submitBtn    = document.getElementById('submit-btn');
 const statusMsg    = document.getElementById('status-msg');
 const progressEl   = document.getElementById('upload-progress');
@@ -1244,26 +1334,40 @@ async function handleSubmit() {
   if (currentObjectType !== '2' && !account) { showError('Вкажіть особовий рахунок'); return; }
   if (!photos.length) { showError('Додайте хоча б одне фото'); return; }
 
+  // Оновлюємо координати безпосередньо перед відправкою.
+  // Оскільки watchPosition тримає чіп активним — відповідь приходить миттєво.
+  // Якщо GPS недоступний (вимкнений або заборонений) — помилка приходить
+  // одразу без очікування таймауту, відправка продовжується без затримки.
   await new Promise(resolve => {
     if (!navigator.geolocation) { resolve(); return; }
     navigator.geolocation.getCurrentPosition(
       pos => {
-        browserCoords = { lat: +pos.coords.latitude.toFixed(7), lon: +pos.coords.longitude.toFixed(7), source: 'browser' };
+        browserCoords = {
+          lat: +pos.coords.latitude.toFixed(7),
+          lon: +pos.coords.longitude.toFixed(7),
+          source: 'browser'
+        };
         const acc = pos.coords.accuracy ? ` (±${Math.round(pos.coords.accuracy)} м)` : '';
         setGpsStatus('ok', `GPS пристрою${acc}`);
-        document.getElementById('gps-coords').textContent = `${browserCoords.lat}, ${browserCoords.lon}`;
+        document.getElementById('gps-coords').textContent =
+          `${browserCoords.lat}, ${browserCoords.lon}`;
         resolve();
       },
-      () => resolve(), 
+      () => resolve(), // GPS недоступний — продовжуємо з тими координатами що є
       { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
     );
   });
 
   const coords = getBestCoords();
+
+  // Унікальний ID для захисту від подвійного надсилання
   const submissionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   const payload = {
-    submissionId, workerName, objectName, account,
+    submissionId,
+    workerName,
+    objectName,
+    account,
     abonentName: inputs.name.value.trim(),
     locality:    inputs.locality.value.trim(),
     street:      inputs.street.value.trim(),
@@ -1281,7 +1385,9 @@ async function handleSubmit() {
       const n = await getQueueCount();
       showSuccess(`Немає з'єднання. Збережено в чергу (${n} звітів). Буде відправлено автоматично.`);
       resetForm();
-    } catch(e) { showError(`Не вдалося зберегти в чергу: ${e.message}. Спробуйте ще раз.`); }
+    } catch(e) {
+      showError(`Не вдалося зберегти в чергу: ${e.message}. Спробуйте ще раз.`);
+    }
     return;
   }
 
@@ -1290,9 +1396,10 @@ async function handleSubmit() {
   progressEl.classList.add('visible');
   progressFill.style.width = '10%';
 
+  let iv = null;
   try {
     let prog = 10;
-    const iv = setInterval(() => {
+    iv = setInterval(() => {
       prog = Math.min(prog + 4, 85);
       progressFill.style.width = prog + '%';
       progressText.textContent = `Завантаження ${photos.length} фото...`;
@@ -1307,27 +1414,43 @@ async function handleSubmit() {
     if (data.status !== 'ok') throw new Error(data.message || 'Помилка сервера');
 
     progressText.textContent = '✓ Готово!';
-    const coordsInfo = coords.source !== 'none' ? ` Координати: ${data.coordsSource}.` : '';
+    const coordsInfo = coords.source !== 'none'
+      ? ` Координати: ${data.coordsSource}.` : '';
     showSuccess(`✓ Звіт відправлено! Збережено ${data.photoCount} фото.${coordsInfo}`);
     resetForm();
   } catch(err) {
+    // Якщо були онлайн під час відправки — сервер міг прийняти дані.
+    // Запитуємо користувача, щоб не створити дублікат автоматично.
     if (isOnline) {
-      const addToQ = confirm(`Помилка відправки: ${err.message}\n\nУвага! Сервер міг вже отримати дані.\nДодати в чергу для повторної відправки?\n\n(Натисніть "Скасування", якщо дані вже є в таблиці)`);
+      const addToQ = confirm(
+        `Помилка відправки: ${err.message}\n\n` +
+        `Увага! Сервер міг вже отримати дані.\n` +
+        `Додати в чергу для повторної відправки?\n\n` +
+        `(Натисніть "Скасування", якщо дані вже є в таблиці)`
+      );
       if (addToQ) {
         try {
           await addToQueue(payload);
           await updateQueueBadge();
           showError(`Помилка: ${err.message}. Збережено в чергу — перевірте таблицю на дублікати.`);
-        } catch(e) { showError(`Помилка відправки: ${err.message}. Перевірте таблицю вручну.`); }
-      } else { showError(`Помилка: ${err.message}. Перевірте таблицю — дані могли зберегтися.`); }
+        } catch(e) {
+          showError(`Помилка відправки: ${err.message}. Перевірте таблицю вручну.`);
+        }
+      } else {
+        showError(`Помилка: ${err.message}. Перевірте таблицю — дані могли зберегтися.`);
+      }
     } else {
+      // Офлайн — додаємо автоматично, це безпечно (submissionId захистить від дубліката)
       try {
         await addToQueue(payload);
         await updateQueueBadge();
         showError(`Немає з'єднання. Збережено в чергу — буде відправлено автоматично.`);
-      } catch(e) { showError(`Помилка відправки: ${err.message}.`); }
+      } catch(e) {
+        showError(`Помилка відправки: ${err.message}.`);
+      }
     }
   } finally {
+    clearInterval(iv); // гарантовано зупиняємо прогрес-таймер навіть при помилці
     submitBtn.disabled = false;
     submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Надіслати звіт`;
     setTimeout(() => { progressEl.classList.remove('visible'); progressFill.style.width='0%'; }, 2500);
@@ -1361,6 +1484,8 @@ function resetForm() {
   renderPreviews();
 }
 
+// ════════════════════════════════════════════════════════
+// Очистити блок "Дані об'єкту"
 document.getElementById('clear-data-btn').addEventListener('click', () => {
   const dataFields = ['account', 'name', 'locality', 'street', 'building', 'apt'];
   dataFields.forEach(f => {
@@ -1372,6 +1497,8 @@ document.getElementById('clear-data-btn').addEventListener('click', () => {
   closeAll();
 });
 
+// PWA — реєстрація Service Worker
+// ════════════════════════════════════════════════════════
 if ('serviceWorker' in navigator && window.location.hostname.includes('github.io')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
