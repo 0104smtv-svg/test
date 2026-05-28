@@ -97,6 +97,11 @@
   .field:last-child { margin-bottom: 0; }
 
   label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  /* Підписи полів — «наскрізні» для тапів: тап по підпису або між рядками
+     не фокусує сусіднє поле, а закриває списки й ховає клавіатуру.
+     ТІЛЬКИ .field > label! Кнопки фото (.btn-photo) — теж <label>,
+     але МАЮТЬ лишатися клікабельними, інакше камера/галерея не відкриються. */
+  .field > label { pointer-events: none; }
   label .req { color: var(--accent2); margin-left: 2px; }
 
   .input-wrap { position: relative; }
@@ -457,7 +462,7 @@
 // URL визначається автоматично (Apps Script)
 // ══════════════════════════════════════════
 const SCRIPT_URL = window.location.hostname.includes('github.io')
-  ? 'https://script.google.com/macros/s/AKfycbzucwn692rxZBBtf8Wcb43BQOHF-D0jSDHKbP3CPP9Xn9CQYXboTpi4VCEPRjvWllQ2/exec'
+  ? 'https://script.google.com/macros/s/AKfycbzH8fPJZj1A_4Q22TSacLwQqk4JLfRyAC7eo_99qJNAAHROkRzlhzD1KKzYrRko_TLw/exec'
   : '__SCRIPT_URL__';
 
 // ════════════════════════════════════════════════════════
@@ -835,6 +840,7 @@ function setupSimpleAC(inputId, dropdownId, getList, onSelect) {
     if (btn) btn.classList.add('visible');
     dd.classList.remove('open');
     if (onSelect) onSelect(val, type);
+    input.blur(); // ховаємо клавіатуру після вибору
   }
 
   function filter(q) {
@@ -1014,6 +1020,7 @@ function selectRecord(el, clickedField) {
     });
   }
   closeAll();
+  document.activeElement.blur(); // ховаємо клавіатуру після автозаповнення
 }
 
 FIELDS.forEach(field => {
