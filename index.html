@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14181c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Час">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Облік часу</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #14181c;
+    --card: #1a2025;
+    --line: #262e35;
+    --text: #e9edf0;
+    --muted: #8b969f;
+    --green: #2fb36a;
+    --red: #e5483f;
+    --amber: #e0a73a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  /* ---------- Вкладки ---------- */
+  .view {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+  }
+  .view > * { flex-shrink: 0; }
+  .view.active { display: flex; }
+  #viewTrack { justify-content: center; gap: 22px; }
+  #viewStats { justify-content: flex-start; gap: 16px; padding-top: 24px; }
+  #info { text-align: center; padding: 6px 16px 10px; }
+  #tabs {
+    display: flex;
+    border-top: 1px solid var(--line);
+    background: #171c21;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  #tabs button {
+    flex: 1;
+    padding: 15px 0 14px;
+    background: none;
+    border: 0;
+    border-top: 3px solid transparent;
+    margin-top: -1px;
+    color: var(--muted);
+    font: inherit;
+    font-size: .95rem;
+    cursor: pointer;
+  }
+  #tabs button[aria-selected="true"] { color: var(--text); font-weight: 600; border-top-color: var(--green); }
+  #tabs button:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+
+  /* ---------- Головний екран ---------- */
+  #status { font-size: 1.25rem; font-weight: 600; text-align: center; }
+  #btn {
+    width: min(62vw, 260px);
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    font: inherit;
+    font-size: 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 0 0 10px rgba(47, 179, 106, .18), 0 14px 40px rgba(0, 0, 0, .45);
+    transition: background .25s, box-shadow .25s, transform .1s, opacity .2s;
+    cursor: pointer;
+  }
+  #btn:active { transform: scale(.96); }
+  #btn:focus-visible { outline: 3px solid #fff; outline-offset: 6px; }
+  #btn.working {
+    background: var(--red);
+    box-shadow: 0 0 0 10px rgba(229, 72, 63, .18), 0 14px 40px rgba(0, 0, 0, .45);
+  }
+  #btn:disabled { opacity: .65; }
+  #timer { font-size: 2.6rem; font-variant-numeric: tabular-nums; font-weight: 300; min-height: 1.2em; }
+  #todayLine { color: var(--muted); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  #sync { color: var(--muted); font-size: .9rem; min-height: 1.2em; text-align: center; }
+  #sync.pending { color: var(--amber); }
+  #sync.error { color: var(--red); }
+  #bkFix {
+    background: #29323a;
+    border: 1px solid #3a454e;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin-top: 4px;
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+  }
+  #note { font-size: .95rem; min-height: 1.2em; max-width: 30em; margin: 0 auto; text-align: center; color: var(--amber); }
+  #note.error { color: var(--red); }
+
+  /* ---------- Статистика ---------- */
+  #stats, #calCard {
+    width: min(92vw, 420px);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  #stats { padding: 2px 16px; }
+  #stats .row {
+    display: grid;
+    grid-template-columns: 1fr auto 4.6em;
+    gap: 10px;
+    align-items: baseline;
+    padding: 11px 0;
+    border-bottom: 1px solid #242c33;
+  }
+  #stats .row:last-child { border-bottom: 0; }
+  #stats .lbl { font-size: .95rem; }
+  #stats .lbl small { display: block; color: var(--muted); font-size: .75rem; margin-top: 1px; }
+  #stats .val { font-size: 1.1rem; font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  #stats .row.main .val { font-size: 1.3rem; }
+  #stats .val small { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; margin-top: 1px; }
+  #stats .days { color: var(--muted); font-size: .85rem; text-align: right; }
+
+  #calCard { padding: 12px; }
+  #calHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  #calHead button {
+    background: none;
+    border: 0;
+    color: var(--text);
+    font: inherit;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 6px 16px;
+    cursor: pointer;
+  }
+  #calHead button:disabled { color: #3a454e; cursor: default; }
+  #calTitle { font-weight: 600; }
+  #calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .wd { text-align: center; color: var(--muted); font-size: .72rem; padding: 2px 0 4px; }
+  .day {
+    aspect-ratio: 1 / 1.05;
+    border-radius: 8px;
+    border: 0;
+    background: #20272d;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+  }
+  .day .n { font-size: .78rem; opacity: .85; }
+  .day .h { font-size: .7rem; font-variant-numeric: tabular-nums; font-weight: 600; min-height: .9em; }
+  .day.blank { background: none; pointer-events: none; }
+  .day.today { box-shadow: inset 0 0 0 2px #fff; }
+  .day:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  #calSummary { margin-top: 10px; text-align: center; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+  #settingsBtn {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font: inherit;
+    font-size: .9rem;
+    padding: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* ---------- Діалоги ---------- */
+  dialog {
+    background: #1d2329;
+    color: var(--text);
+    border: 1px solid #2c353d;
+    border-radius: 14px;
+    width: min(92vw, 420px);
+    max-height: 88vh;
+    padding: 20px;
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog h2 { margin: 0 0 14px; font-size: 1.15rem; text-transform: capitalize; }
+  dialog h3 { margin: 20px 0 6px; font-size: 1rem; }
+  dialog label { display: block; margin: 12px 0 4px; font-size: .9rem; color: var(--muted); }
+  dialog input[type="text"], dialog input[type="datetime-local"] {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid #3a454e;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+  }
+  dialog .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  dialog .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  dialog button {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #3a454e;
+    background: #29323a;
+    color: var(--text);
+    font: inherit;
+    font-size: .88rem;
+    cursor: pointer;
+  }
+  dialog button.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
+  dialog button.danger { background: transparent; border-color: #5a2a27; color: var(--red); margin-right: auto; }
+  .btns button.danger { margin-right: 0; }
+  .err { color: var(--red); font-size: .9rem; min-height: 1.2em; margin-top: 8px; }
+  .hint { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+  #dayList { max-height: 50vh; overflow-y: auto; }
+  .shiftRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #2c353d;
+  }
+  .shiftRow .t { font-size: 1.05rem; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .shiftRow .m { color: var(--muted); font-size: .85rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); padding: 8px 0; }
+  .totalRow { padding-top: 10px; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<main id="viewTrack" class="view active" role="tabpanel" aria-labelledby="tabTrack">
+  <div id="status"></div>
+  <button id="btn" type="button" disabled>…</button>
+  <div id="timer"></div>
+  <div id="todayLine"></div>
+</main>
+
+<section id="viewStats" class="view" role="tabpanel" aria-labelledby="tabStats">
+  <div id="stats" aria-label="Статистика"></div>
+  <div id="calCard">
+    <div id="calHead">
+      <button id="calPrev" type="button" aria-label="Попередній місяць">‹</button>
+      <div id="calTitle"></div>
+      <button id="calNext" type="button" aria-label="Наступний місяць">›</button>
+    </div>
+    <div id="calGrid"></div>
+    <div id="calSummary"></div>
+  </div>
+  <button id="settingsBtn" type="button">Налаштування</button>
+</section>
+
+<div id="info">
+  <div id="sync"></div>
+  <button id="bkFix" type="button" hidden></button>
+  <div id="note" role="status"></div>
+</div>
+
+<nav id="tabs" role="tablist">
+  <button id="tabTrack" type="button" role="tab" aria-selected="true">Облік</button>
+  <button id="tabStats" type="button" role="tab" aria-selected="false">Статистика</button>
+</nav>
+
+<dialog id="dlg">
+  <h2>Налаштування</h2>
+  <label for="cfgRate">Вартість робочої години, ₴</label>
+  <input id="cfgRate" type="text" inputmode="decimal" autocomplete="off" placeholder="наприклад, 150">
+  <div class="hint">Суми в статистиці рахуються за поточною ставкою.</div>
+
+  <h3>Дані</h3>
+  <div class="hint">Усе зберігається в пам’яті застосунку на цьому телефоні, інтернет не потрібен.</div>
+  <div id="persistStatus" class="hint"></div>
+  <div class="btns">
+    <button id="expJson" type="button">Зберегти копію (JSON)</button>
+    <button id="expCsv" type="button">Експорт у CSV</button>
+    <button id="impBtn" type="button">Імпорт з файлу</button>
+  </div>
+  <input id="impFile" type="file" accept=".json,.csv,application/json,text/csv,text/plain" hidden>
+
+  <div id="bkSection">
+    <h3>Автокопія у файл</h3>
+    <div class="hint">Після кожної зміни дані самі записуються у файл на телефоні, окремо від сховища браузера.</div>
+    <div id="bkStatus" class="hint"></div>
+    <div class="btns">
+      <button id="bkCreate" type="button">Створити файл…</button>
+      <button id="bkPick" type="button">Вибрати наявний…</button>
+      <button id="bkOff" type="button" class="danger" hidden>Вимкнути</button>
+    </div>
+  </div>
+
+  <div id="cfgError" class="err"></div>
+  <div class="row">
+    <button id="cfgCancel" type="button">Закрити</button>
+    <button id="cfgSave" type="button" class="primary">Зберегти ставку</button>
+  </div>
+</dialog>
+
+<dialog id="dayDlg">
+  <h2 id="dayTitle"></h2>
+  <div id="dayList"></div>
+  <div class="row">
+    <button id="dayAdd" type="button">Додати зміну</button>
+    <button id="dayClose" type="button" class="primary">Закрити</button>
+  </div>
+</dialog>
+
+<dialog id="editDlg">
+  <h2 id="editTitle"></h2>
+  <label for="editStart">Початок</label>
+  <input id="editStart" type="datetime-local">
+  <label for="editEnd">Кінець</label>
+  <input id="editEnd" type="datetime-local">
+  <div id="editHint" class="hint"></div>
+  <div id="editError" class="err"></div>
+  <div class="row">
+    <button id="editDelete" type="button" class="danger">Видалити</button>
+    <button id="editCancel" type="button">Скасувати</button>
+    <button id="editSave" type="button" class="primary">Зберегти</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const btn = $('btn'), statusEl = $('status'), timerEl = $('timer'), todayLineEl = $('todayLine');
+  const statsEl = $('stats'), syncEl = $('sync'), noteEl = $('note'), bkFixEl = $('bkFix');
+  const calTitleEl = $('calTitle'), calGridEl = $('calGrid'), calSummaryEl = $('calSummary');
+  const dlg = $('dlg'), dayDlg = $('dayDlg'), editDlg = $('editDlg');
+  const FUTURE_MS = 5 * 60 * 1000;
+  const LS_DATA = 'wt_local_data'; // дзеркальна копія даних у localStorage (запасний варіант)
+
+  const MONTHS = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня',
+                  'вересня', 'жовтня', 'листопада', 'грудня'];
+  const MONTHS_NOM = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень',
+                      'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+
+  // ---------- Допоміжне ----------
+  function lsGet(key, def) {
+    try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? def : v; }
+    catch (e) { return def; }
+  }
+  function lsSet(key, v) {
+    try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; }
+  }
+  const pad = n => String(n).padStart(2, '0');
+  function keyOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  // Тривалість у годинах і хвилинах (секунди відкидаються): 03:07
+  function hm(ms) {
+    const m = Math.floor(Math.max(0, ms) / 60000);
+    return pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+  }
+  // Те саме без нуля попереду годин (для тісних клітинок календаря): 3:07
+  function hmShort(ms) {
+    const m = Math.floor(Math.max(0, ms) / 60000);
+    return Math.floor(m / 60) + ':' + pad(m % 60);
+  }
+  function clock(ms) { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function shortDate(ms) { const d = new Date(ms); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1); }
+  function fullDate(ms) { const d = new Date(ms); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear(); }
+  function toInput(ms) { return keyOf(new Date(ms)) + 'T' + clock(ms); }
+  function fromInput(str) { return new Date(str).getTime(); }
+  function dayWord(n) {
+    const a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return 'день';
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'дні';
+    return 'днів';
+  }
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+  function rateNow() { return data && data.rate > 0 ? data.rate : 0; }
+  function money(ms) {
+    const v = Math.round(ms / 3600000 * rateNow() * 100) / 100;
+    return v.toLocaleString('uk-UA', { maximumFractionDigits: 2 }) + ' ₴';
+  }
+  function note(text, isError) {
+    noteEl.textContent = text || '';
+    noteEl.classList.toggle('error', !!isError);
+  }
+
+  // ---------- Сховище: IndexedDB (основне) + localStorage (запасне дзеркало) ----------
+  function idb() {
+    return new Promise((resolve, reject) => {
+      const r = indexedDB.open('worktime', 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore('kv'); };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  async function idbGet(key) {
+    const db = await idb();
+    return new Promise((resolve, reject) => {
+      const q = db.transaction('kv').objectStore('kv').get(key);
+      q.onsuccess = () => resolve(q.result);
+      q.onerror = () => reject(q.error);
+    });
+  }
+  async function idbSet(key, val) {
+    const db = await idb();
+    return new Promise((resolve, reject) => {
+      const t = db.transaction('kv', 'readwrite');
+      t.objectStore('kv').put(val, key);
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error);
+    });
+  }
+  async function idbDel(key) {
+    const db = await idb();
+    return new Promise((resolve, reject) => {
+      const t = db.transaction('kv', 'readwrite');
+      t.objectStore('kv').delete(key);
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+    });
+  }
+
+  // data = { v: 1, shifts: [{ id, s: початок_мс, e: кінець_мс | null }], rate, updatedAt }
+  let data = null;
+  let storageError = '';
+  let needsResync = false; // основне сховище порожнє або відстає від запасної копії
+
+  async function loadData() {
+    let a = null;
+    try { a = await idbGet('data'); } catch (e) { /* IndexedDB недоступна */ }
+    const b = lsGet(LS_DATA, null);
+    const okA = a && Array.isArray(a.shifts);
+    const okB = b && Array.isArray(b.shifts);
+    needsResync = !!okB && (!okA || (b.updatedAt || 0) > (a.updatedAt || 0));
+    const best = [okA ? a : null, okB ? b : null].filter(Boolean)
+      .sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0))[0];
+    return best || null;
+  }
+
+  async function persist() {
+    data.updatedAt = Date.now();
+    const okLs = lsSet(LS_DATA, data);
+    let okIdb = true;
+    try { await idbSet('data', data); } catch (e) { okIdb = false; }
+    storageError = (!okLs && !okIdb) ? 'не вдалося записати дані в пам’ять застосунку' : '';
+    renderInfo();
+    scheduleBackup();
+  }
+
+  // Перенесення даних зі старої версії (із Google Таблицею), якщо вона була на цьому ж адресі
+  function applyQueue(list, queue) {
+    const findOpen = () => list.filter(x => x.e == null).pop();
+    queue.forEach(ev => {
+      if (ev.type === 'in') { if (!findOpen()) list.push({ id: ev.id, s: ev.ts, e: null }); }
+      else if (ev.type === 'out') { const o = findOpen(); if (o && ev.ts >= o.s) o.e = ev.ts; }
+      else if (ev.type === 'add') list.push({ id: ev.id, s: ev.s, e: ev.e });
+      else if (ev.type === 'edit') { const t = list.find(x => x.id === ev.sid); if (t) { t.s = ev.s; if (ev.e != null) t.e = ev.e; } }
+      else if (ev.type === 'del') { const i = list.findIndex(x => x.id === ev.sid); if (i >= 0) list.splice(i, 1); }
+    });
+    return list;
+  }
+  function migrateFromOld() {
+    const old = lsGet('wt_shifts2', null) || lsGet('wt_shifts', null);
+    if (!old || !old.length) return null;
+    let list = old.map(x => ({ id: x.id || uuid(), s: x.s, e: x.e == null ? null : x.e }));
+    list = applyQueue(list, lsGet('wt_queue', []));
+    list.sort((a, b) => a.s - b.s);
+    const oldCfg = lsGet('wt_cfg', null);
+    return { v: 1, shifts: list, rate: oldCfg && oldCfg.rate > 0 ? oldCfg.rate : 0, updatedAt: Date.now() };
+  }
+
+  // ---------- Автокопія у файл (File System Access, Chrome) ----------
+  const bkSupported = typeof window.showSaveFilePicker === 'function';
+  let backupHandle = null;
+  let bk = { needsPermission: false, lastOk: null, error: '' };
+  let backupTimer = null;
+  let backupChain = Promise.resolve();
+
+  function exportObj() {
+    const f = ms => ms == null ? null : keyOf(new Date(ms)) + ' ' + clock(ms);
+    return {
+      app: 'oblik-chasu',
+      v: 1,
+      exportedAt: new Date().toISOString(),
+      rate: data.rate || 0,
+      shifts: data.shifts.map(x => ({ id: x.id, s: x.s, e: x.e, start: f(x.s), end: f(x.e) }))
+    };
+  }
+  async function permissionOf(handle, ask) {
+    const opts = { mode: 'readwrite' };
+    if (typeof handle.queryPermission !== 'function') return 'granted';
+    let p = await handle.queryPermission(opts);
+    if (p !== 'granted' && ask && typeof handle.requestPermission === 'function') {
+      p = await handle.requestPermission(opts);
+    }
+    return p;
+  }
+  async function writeBackup(ask) {
+    if (!backupHandle || !data) return false;
+    try {
+      const p = await permissionOf(backupHandle, ask);
+      if (p !== 'granted') { bk.needsPermission = true; bk.error = ''; renderInfo(); return false; }
+      const w = await backupHandle.createWritable();
+      await w.write(JSON.stringify(exportObj(), null, 1));
+      await w.close();
+      bk = { needsPermission: false, lastOk: Date.now(), error: '' };
+      renderInfo();
+      return true;
+    } catch (e) {
+      const name = e && e.name ? e.name : String(e);
+      if (name === 'NotAllowedError' || name === 'SecurityError') { bk.needsPermission = true; bk.error = ''; }
+      else bk.error = name;
+      renderInfo();
+      return false;
+    }
+  }
+  function scheduleBackup() {
+    if (!backupHandle) return;
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(() => {
+      backupChain = backupChain.then(() => writeBackup(false));
+    }, 400);
+  }
+  async function initBackup() {
+    if (!bkSupported) return;
+    try { backupHandle = (await idbGet('backupHandle')) || null; } catch (e) { backupHandle = null; }
+    if (backupHandle) {
+      try {
+        const p = await permissionOf(backupHandle, false);
+        bk.needsPermission = p !== 'granted';
+        if (p === 'granted') await writeBackup(false);
+      } catch (e) { bk.needsPermission = true; }
+    }
+  }
+  async function setBackupHandle(h) {
+    backupHandle = h;
+    let kept = true;
+    try { await idbSet('backupHandle', h); } catch (e) { kept = false; }
+    bk = { needsPermission: false, lastOk: null, error: '' };
+    const ok = await writeBackup(true);
+    renderInfo();
+    renderBkStatus();
+    if (!kept) $('cfgError').textContent = 'Файл підключено лише на час цього сеансу: браузер не зміг запам’ятати його.';
+    else if (!ok && !bk.needsPermission) $('cfgError').textContent = 'Не вдалося записати у файл: ' + (bk.error || 'невідома помилка');
+  }
+  function pickerTypes() {
+    return [{ description: 'Копія даних (JSON)', accept: { 'application/json': ['.json'] } }];
+  }
+
+  // ---------- Експорт / імпорт ----------
+  function download(name, text, type) {
+    const blob = new Blob([text], { type: type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+  function stamp() { return keyOf(new Date()); }
+  function dtCsv(ms) {
+    const d = new Date(ms);
+    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00';
+  }
+  function exportCsv() {
+    const nowMs = Date.now();
+    const lines = ['Дата;Початок;Кінець;Тривалість (г:хв);Годин (десятково)'];
+    data.shifts.forEach(x => {
+      const end = x.e == null ? nowMs : x.e;
+      const dur = Math.max(0, end - x.s);
+      lines.push([
+        fullDate(x.s), dtCsv(x.s), x.e == null ? '' : dtCsv(x.e),
+        hmShort(dur), (Math.floor(dur / 60000) / 60).toFixed(2).replace('.', ',')
+      ].join(';'));
+    });
+    return '\uFEFF' + lines.join('\r\n');
+  }
+
+  function parseCSV(text) {
+    text = text.replace(/^\uFEFF/, '');
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const delim = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+    const rows = [];
+    let row = [], cur = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quoted) {
+        if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else quoted = false; }
+        else cur += c;
+      } else if (c === '"') quoted = true;
+      else if (c === delim) { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cur); cur = ''; rows.push(row); row = [];
+      } else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+  function parseDT(str) {
+    const m = /(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(str || ''));
+    if (!m) return NaN;
+    return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)).getTime();
+  }
+  function shiftsFromCsv(text) {
+    const list = [];
+    parseCSV(text).forEach(r => {
+      const s = parseDT(r[1]);
+      if (!isFinite(s)) return; // заголовок або порожній рядок
+      const e = r[2] && String(r[2]).trim() ? parseDT(r[2]) : null;
+      list.push({ id: uuid(), s: s, e: e != null && isFinite(e) ? e : null });
+    });
+    return list;
+  }
+  function validShifts(list) {
+    const out = [];
+    for (const x of list) {
+      const s = Number(x.s);
+      const e = x.e == null ? null : Number(x.e);
+      if (!isFinite(s) || (e !== null && (!isFinite(e) || e <= s))) return null;
+      out.push({ id: x.id ? String(x.id) : uuid(), s: s, e: e });
+    }
+    out.sort((a, b) => a.s - b.s);
+    // відкритою може бути лише остання зміна
+    if (out.some((x, i) => x.e === null && i !== out.length - 1)) return null;
+    // зміни не повинні перетинатися
+    for (let i = 1; i < out.length; i++) if (out[i].s < out[i - 1].e) return null;
+    return out;
+  }
+  async function importText(text) {
+    let list, rate = null;
+    const trimmed = text.replace(/^\uFEFF/, '').trim();
+    if (trimmed.charAt(0) === '{') {
+      let obj;
+      try { obj = JSON.parse(trimmed); } catch (e) { throw new Error('Файл не схожий на копію цього застосунку (помилка JSON).'); }
+      if (!obj || !Array.isArray(obj.shifts)) throw new Error('У файлі немає списку змін.');
+      list = obj.shifts;
+      if (obj.rate > 0) rate = Number(obj.rate);
+    } else {
+      list = shiftsFromCsv(trimmed);
+    }
+    const shifts = validShifts(list);
+    if (!shifts) throw new Error('У файлі є некоректні або такі, що перетинаються, зміни. Імпорт скасовано, дані не змінено.');
+    if (!shifts.length) throw new Error('У файлі не знайдено жодної зміни.');
+    const msg = 'Замінити всі поточні дані (' + data.shifts.length + ' змін) даними з файлу (' + shifts.length +
+      ' змін)? Поточні дані буде втрачено, якщо ти не зберіг їх копію.';
+    if (!window.confirm(msg)) return;
+    data.shifts = shifts;
+    if (rate !== null) data.rate = rate;
+    note('Імпортовано змін: ' + shifts.length + '.');
+    render();
+    await persist();
+  }
+
+  // ---------- Розрахунки ----------
+  function currentShifts() { return data ? data.shifts : []; }
+  function stateOf(list) {
+    const open = list.filter(x => x.e == null).pop();
+    return open ? { working: true, startedAt: open.s } : { working: false, startedAt: null };
+  }
+
+  function computeStats(list) {
+    const now = new Date();
+    const nowMs = now.getTime();
+    const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const back = (now.getDay() + 6) % 7; // тиждень починається з понеділка
+    const monday = new Date(y, m, d - back);
+    const sunday = new Date(y, m, d - back + 6);
+    const mk = day => y + '-' + pad(m + 1) + '-' + pad(day);
+    const short = dt => pad(dt.getDate()) + '.' + pad(dt.getMonth() + 1);
+
+    const periods = [
+      { id: 'today', label: 'Сьогодні', from: keyOf(now), to: keyOf(now) },
+      { id: 'week', label: 'Тиждень', hint: short(monday) + ' – ' + short(sunday), from: keyOf(monday), to: keyOf(sunday) },
+      { id: 'h1', label: '1–15 ' + MONTHS[m], from: mk(1), to: mk(15) }
+    ];
+    if (d >= 16) periods.push({ id: 'h2', label: '16–' + lastDay + ' ' + MONTHS[m], from: mk(16), to: mk(lastDay) });
+    periods.push({ id: 'month', label: MONTHS_NOM[m], hint: String(y), from: mk(1), to: mk(lastDay) });
+    periods.forEach(p => { p.ms = 0; p.days = new Set(); });
+
+    list.forEach(sh => {
+      const key = keyOf(new Date(sh.s)); // зміна належить дню, коли вона почалась
+      const dur = Math.max(0, (sh.e == null ? nowMs : sh.e) - sh.s);
+      periods.forEach(p => {
+        if (key >= p.from && key <= p.to) { p.ms += dur; p.days.add(key); }
+      });
+    });
+    return periods;
+  }
+
+  function renderStats(list) {
+    const periods = computeStats(list);
+    todayLineEl.textContent = 'Сьогодні: ' + hm(periods[0].ms) + (rateNow() ? ' · ' + money(periods[0].ms) : '');
+    statsEl.innerHTML = periods.map(p =>
+      '<div class="row' + (p.id === 'today' ? ' main' : '') + '">' +
+        '<div class="lbl">' + p.label + (p.hint ? '<small>' + p.hint + '</small>' : '') + '</div>' +
+        '<div class="val">' + hm(p.ms) + (rateNow() ? '<small>' + money(p.ms) + '</small>' : '') + '</div>' +
+        '<div class="days">' + p.days.size + ' ' + dayWord(p.days.size) + '</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  // ---------- Календар ----------
+  const cal = { y: new Date().getFullYear(), m: new Date().getMonth() };
+
+  function renderCalendar(list) {
+    const nowD = new Date(), nowMs = nowD.getTime();
+    const first = new Date(cal.y, cal.m, 1);
+    const lastDay = new Date(cal.y, cal.m + 1, 0).getDate();
+    const lead = (first.getDay() + 6) % 7;
+    const todayKey = keyOf(nowD);
+
+    const perDay = {};
+    list.forEach(sh => {
+      const d = new Date(sh.s);
+      if (d.getFullYear() !== cal.y || d.getMonth() !== cal.m) return;
+      const k = keyOf(d);
+      const o = perDay[k] || (perDay[k] = { ms: 0, open: false });
+      o.ms += Math.max(0, (sh.e == null ? nowMs : sh.e) - sh.s);
+      if (sh.e == null) o.open = true;
+    });
+
+    let html = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(w => '<div class="wd">' + w + '</div>').join('');
+    for (let i = 0; i < lead; i++) html += '<div class="day blank"></div>';
+    let total = 0, days = 0;
+    for (let day = 1; day <= lastDay; day++) {
+      const key = cal.y + '-' + pad(cal.m + 1) + '-' + pad(day);
+      const o = perDay[key];
+      let style = '', label = '';
+      if (o) {
+        total += o.ms;
+        days++;
+        const alpha = o.open ? 0.5 : Math.min(1, o.ms / 3600000 / 8) * 0.5 + 0.15;
+        style = ' style="background:' + (o.open ? 'rgba(229,72,63,' : 'rgba(47,179,106,') + alpha.toFixed(2) + ')"';
+        label = hmShort(o.ms);
+      }
+      html += '<button type="button" class="day' + (key === todayKey ? ' today' : '') +
+        '" data-key="' + key + '"' + style + '><span class="n">' + day + '</span><span class="h">' + label + '</span></button>';
+    }
+    calGridEl.innerHTML = html;
+    calTitleEl.textContent = MONTHS_NOM[cal.m] + ' ' + cal.y;
+    calSummaryEl.textContent = days
+      ? 'Разом: ' + hmShort(total) + ' · ' + days + ' ' + dayWord(days) + (rateNow() ? ' · ' + money(total) : '')
+      : 'У цьому місяці змін немає';
+
+    const earliest = list.length ? Math.min.apply(null, list.map(x => x.s)) : Infinity;
+    $('calPrev').disabled = !(earliest < first.getTime());
+    $('calNext').disabled = (cal.y * 12 + cal.m) >= (nowD.getFullYear() * 12 + nowD.getMonth());
+  }
+  $('calPrev').addEventListener('click', () => {
+    cal.m--; if (cal.m < 0) { cal.m = 11; cal.y--; }
+    renderCalendar(currentShifts());
+  });
+  $('calNext').addEventListener('click', () => {
+    cal.m++; if (cal.m > 11) { cal.m = 0; cal.y++; }
+    renderCalendar(currentShifts());
+  });
+  calGridEl.addEventListener('click', ev => {
+    const b = ev.target.closest('.day[data-key]');
+    if (b) openDay(b.dataset.key);
+  });
+
+  // ---------- Головне відображення ----------
+  let view = { working: false, startedAt: null };
+  let lastMin = Math.floor(Date.now() / 60000);
+
+  function render() {
+    const list = currentShifts();
+    view = stateOf(list);
+    btn.classList.toggle('working', view.working);
+    btn.textContent = view.working ? 'Піти з роботи' : 'Прийшов на роботу';
+    statusEl.textContent = view.working ? 'Ти на роботі з ' + clock(view.startedAt) : 'Ти не на роботі';
+    renderStats(list);
+    renderCalendar(list);
+    setTimer();
+    renderInfo();
+    if (dayDlg.open) renderDay(list);
+  }
+  function setTimer() {
+    timerEl.textContent = view.working && view.startedAt ? hm(Date.now() - view.startedAt) : '';
+  }
+
+  let fixAction = null;
+  function renderInfo() {
+    let text = 'Збережено на телефоні';
+    let cls = '';
+    fixAction = null;
+    if (storageError) { text = 'Помилка: ' + storageError; cls = 'error'; }
+    else if (bkSupported) {
+      if (!backupHandle) {
+        text += ' · автокопію у файл не налаштовано';
+        cls = 'pending';
+        fixAction = { label: 'Налаштувати автокопію', act: 'setup' };
+      } else if (bk.needsPermission) {
+        text += ' · автокопію призупинено';
+        cls = 'pending';
+        fixAction = { label: 'Дозволити запис у файл', act: 'grant' };
+      } else if (bk.error) {
+        text += ' · помилка автокопії (' + bk.error + ')';
+        cls = 'pending';
+        fixAction = { label: 'Налаштувати автокопію', act: 'setup' };
+      } else if (bk.lastOk) {
+        text += ' · копія у файлі ' + clock(bk.lastOk);
+      }
+    }
+    syncEl.textContent = text;
+    syncEl.className = cls;
+    bkFixEl.hidden = !fixAction;
+    if (fixAction) bkFixEl.textContent = fixAction.label;
+    if (dlg.open) renderBkStatus();
+  }
+  bkFixEl.addEventListener('click', async () => {
+    if (!fixAction) return;
+    if (fixAction.act === 'setup') openSettings();
+    else await writeBackup(true); // запит дозволу має йти з дотику користувача
+  });
+
+  // ---------- Кнопка ----------
+  let lastTap = 0;
+  btn.addEventListener('click', () => {
+    if (!data) return;
+    const now = Date.now();
+    if (now - lastTap < 2000) return; // захист від випадкового подвійного дотику
+    lastTap = now;
+    btn.disabled = true;
+    setTimeout(() => { btn.disabled = false; }, 2000);
+    if (navigator.vibrate) navigator.vibrate(40);
+
+    const open = data.shifts.filter(x => x.e == null).pop();
+    if (open) {
+      if (now <= open.s) { note('Час завершення має бути пізніше за початок. Виправ початок зміни.', true); return; }
+      open.e = now;
+    } else {
+      const clash = data.shifts.find(x => x.s <= now && now < x.e);
+      if (clash) { note('Зараз збігається зі зміною ' + clock(clash.s) + ' – ' + clock(clash.e) + '. Виправ її у календарі.', true); return; }
+      data.shifts.push({ id: uuid(), s: now, e: null });
+    }
+    commit();
+  });
+
+  function commit() {
+    data.shifts.sort((a, b) => a.s - b.s);
+    note('');
+    render();
+    persist();
+  }
+
+  // ---------- Вкладки ----------
+  function showTab(name) {
+    const isTrack = name === 'track';
+    $('viewTrack').classList.toggle('active', isTrack);
+    $('viewStats').classList.toggle('active', !isTrack);
+    $('tabTrack').setAttribute('aria-selected', String(isTrack));
+    $('tabStats').setAttribute('aria-selected', String(!isTrack));
+  }
+  $('tabTrack').addEventListener('click', () => showTab('track'));
+  $('tabStats').addEventListener('click', () => showTab('stats'));
+
+  // ---------- День: список змін ----------
+  let daySel = null;
+  let dayShifts = [];
+
+  function openDay(key) {
+    daySel = key;
+    renderDay(currentShifts());
+    dayDlg.showModal();
+  }
+  function renderDay(list) {
+    const p = daySel.split('-').map(Number);
+    const d = new Date(p[0], p[1] - 1, p[2]);
+    $('dayTitle').textContent = d.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+    dayShifts = list.filter(x => keyOf(new Date(x.s)) === daySel);
+    if (!dayShifts.length) {
+      $('dayList').innerHTML = '<div class="empty">Змін немає</div>';
+      return;
+    }
+    const nowMs = Date.now();
+    let total = 0;
+    let html = dayShifts.map((x, i) => {
+      const dur = Math.max(0, (x.e == null ? nowMs : x.e) - x.s);
+      total += dur;
+      const end = x.e == null ? '…' : clock(x.e) + (keyOf(new Date(x.e)) !== daySel ? ' (' + shortDate(x.e) + ')' : '');
+      return '<div class="shiftRow"><div>' +
+        '<div class="t">' + clock(x.s) + ' – ' + end + '</div>' +
+        '<div class="m">' + hm(dur) + (x.e == null ? ' · триває' : '') + (rateNow() ? ' · ' + money(dur) : '') + '</div>' +
+        '</div><button type="button" class="editBtn" data-idx="' + i + '">Змінити</button></div>';
+    }).join('');
+    if (dayShifts.length > 1) {
+      html += '<div class="totalRow">Разом за день: ' + hm(total) + (rateNow() ? ' · ' + money(total) : '') + '</div>';
+    }
+    $('dayList').innerHTML = html;
+  }
+  $('dayList').addEventListener('click', ev => {
+    const b = ev.target.closest('.editBtn');
+    if (b) openEdit('edit', dayShifts[Number(b.dataset.idx)]);
+  });
+  $('dayAdd').addEventListener('click', () => openEdit('add', null));
+  $('dayClose').addEventListener('click', () => dayDlg.close());
+
+  // ---------- Правка / додавання зміни ----------
+  let editCtx = null;
+
+  function openEdit(mode, shift) {
+    $('editError').textContent = '';
+    if (mode === 'add') {
+      const p = daySel.split('-').map(Number);
+      const nowMs = Date.now();
+      let e = new Date(p[0], p[1] - 1, p[2], 18, 0).getTime();
+      if (e > nowMs) e = Math.floor(nowMs / 60000) * 60000;
+      let s = new Date(p[0], p[1] - 1, p[2], 9, 0).getTime();
+      if (s >= e) s = e - 3600000;
+      editCtx = { mode: 'add', shift: null };
+      $('editTitle').textContent = 'Нова зміна';
+      $('editStart').value = toInput(s);
+      $('editEnd').value = toInput(e);
+      $('editHint').textContent = '';
+      $('editDelete').hidden = true;
+    } else {
+      editCtx = { mode: 'edit', shift: shift };
+      $('editTitle').textContent = 'Змінити зміну';
+      $('editStart').value = toInput(shift.s);
+      $('editEnd').value = shift.e == null ? '' : toInput(shift.e);
+      $('editHint').textContent = shift.e == null
+        ? 'Зміна ще триває. Вкажи «Кінець», щоб закрити її, або залиш порожнім.'
+        : '';
+      $('editDelete').hidden = false;
+    }
+    editDlg.showModal();
+  }
+
+  $('editCancel').addEventListener('click', () => editDlg.close());
+
+  $('editSave').addEventListener('click', () => {
+    const fail = msg => { $('editError').textContent = msg; };
+    const s = fromInput($('editStart').value);
+    const eRaw = $('editEnd').value;
+    const e = eRaw ? fromInput(eRaw) : null;
+    const nowMs = Date.now();
+    const limit = nowMs + FUTURE_MS;
+    const isOpenShift = editCtx.mode === 'edit' && editCtx.shift.e == null;
+
+    if (!isFinite(s)) return fail('Вкажи час початку.');
+    if (e === null && !isOpenShift) return fail('Вкажи час завершення.');
+    if (e !== null && !isFinite(e)) return fail('Некоректний час завершення.');
+    if (e !== null && e <= s) return fail('Завершення має бути пізніше за початок.');
+    if (s > limit || (e !== null && e > limit)) return fail('Час не може бути в майбутньому.');
+
+    const endEff = e === null ? Math.max(nowMs, s + 1) : e;
+    const clash = data.shifts.find(x =>
+      x !== editCtx.shift && s < (x.e == null ? nowMs : x.e) && endEff > x.s);
+    if (clash) {
+      return fail('Перетинається зі зміною ' + clock(clash.s) + ' – ' +
+        (clash.e == null ? '…' : clock(clash.e)) + ' (' + shortDate(clash.s) + ').');
+    }
+
+    const dur = endEff - s;
+    if (dur > 16 * 3600000 && !window.confirm('Тривалість зміни ' + hm(dur) + '. Зберегти?')) return;
+
+    editDlg.close();
+    if (editCtx.mode === 'add') data.shifts.push({ id: uuid(), s: s, e: e });
+    else { editCtx.shift.s = s; editCtx.shift.e = e; }
+    commit();
+  });
+
+  $('editDelete').addEventListener('click', () => {
+    if (!window.confirm('Видалити цю зміну?')) return;
+    editDlg.close();
+    const i = data.shifts.indexOf(editCtx.shift);
+    if (i >= 0) data.shifts.splice(i, 1);
+    commit();
+  });
+
+  // ---------- Налаштування ----------
+  function renderBkStatus() {
+    const el = $('bkStatus');
+    $('bkSection').hidden = false;
+    if (!bkSupported) {
+      el.textContent = 'У цьому браузері автокопія у файл недоступна. Користуйся кнопкою «Зберегти копію (JSON)».';
+      $('bkCreate').hidden = true; $('bkPick').hidden = true; $('bkOff').hidden = true;
+      return;
+    }
+    $('bkCreate').hidden = false; $('bkPick').hidden = false;
+    $('bkOff').hidden = !backupHandle;
+    if (!backupHandle) { el.textContent = 'Файл не вибрано.'; return; }
+    let t = 'Файл: ' + (backupHandle.name || 'без назви') + '. ';
+    if (bk.needsPermission) t += 'Потрібен дозвіл на запис — натисни «Дозволити запис у файл» на головному екрані.';
+    else if (bk.error) t += 'Помилка запису: ' + bk.error + '.';
+    else if (bk.lastOk) t += 'Остання копія: ' + clock(bk.lastOk) + '.';
+    else t += 'Очікує першого запису.';
+    el.textContent = t;
+  }
+  async function renderPersistStatus() {
+    const el = $('persistStatus');
+    try {
+      if (navigator.storage && navigator.storage.persisted) {
+        const p = await navigator.storage.persisted();
+        el.textContent = p
+          ? 'Постійне сховище дозволено: браузер не видалятиме дані сам.'
+          : 'Постійне сховище не дозволено: за нестачі місця браузер може видалити дані. Налаштуй автокопію у файл.';
+      } else el.textContent = '';
+    } catch (e) { el.textContent = ''; }
+  }
+  function openSettings() {
+    $('cfgRate').value = data && data.rate ? String(data.rate) : '';
+    $('cfgError').textContent = '';
+    renderBkStatus();
+    renderPersistStatus();
+    dlg.showModal();
+  }
+  $('settingsBtn').addEventListener('click', openSettings);
+  $('cfgCancel').addEventListener('click', () => dlg.close());
+  $('cfgSave').addEventListener('click', () => {
+    const raw = $('cfgRate').value.trim().replace(',', '.');
+    const rate = raw === '' ? 0 : Number(raw);
+    if (!isFinite(rate) || rate < 0) { $('cfgError').textContent = 'Вартість години має бути числом, наприклад 150 або 150.50.'; return; }
+    data.rate = rate;
+    dlg.close();
+    render();
+    persist();
+  });
+
+  $('expJson').addEventListener('click', () => {
+    download('oblik-chasu-' + stamp() + '.json', JSON.stringify(exportObj(), null, 1), 'application/json');
+  });
+  $('expCsv').addEventListener('click', () => {
+    download('oblik-chasu-' + stamp() + '.csv', exportCsv(), 'text/csv;charset=utf-8');
+  });
+  $('impBtn').addEventListener('click', () => $('impFile').click());
+  $('impFile').addEventListener('change', async ev => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    try {
+      await importText(await file.text());
+      dlg.close();
+    } catch (e) {
+      $('cfgError').textContent = e.message || String(e);
+    }
+  });
+
+  $('bkCreate').addEventListener('click', async () => {
+    $('cfgError').textContent = '';
+    try {
+      const h = await window.showSaveFilePicker({ suggestedName: 'oblik-chasu.json', types: pickerTypes() });
+      await setBackupHandle(h);
+    } catch (e) {
+      if (e && e.name !== 'AbortError') {
+        $('cfgError').textContent = 'Не вдалося створити файл (' + (e.message || e.name) +
+          '). Створи порожній файл у додатку «Файли» і вибери його кнопкою «Вибрати наявний…».';
+      }
+    }
+  });
+  $('bkPick').addEventListener('click', async () => {
+    $('cfgError').textContent = '';
+    try {
+      const picked = await window.showOpenFilePicker({ types: pickerTypes(), multiple: false });
+      const h = picked[0];
+      if (!window.confirm('Вміст файлу «' + (h.name || '') + '» буде замінено копією даних. Продовжити?')) return;
+      await setBackupHandle(h);
+    } catch (e) {
+      if (e && e.name !== 'AbortError') $('cfgError').textContent = 'Не вдалося вибрати файл: ' + (e.message || e.name);
+    }
+  });
+  $('bkOff').addEventListener('click', async () => {
+    if (!window.confirm('Вимкнути автокопію у файл? Сам файл на телефоні залишиться.')) return;
+    backupHandle = null;
+    bk = { needsPermission: false, lastOk: null, error: '' };
+    try { await idbDel('backupHandle'); } catch (e) { /* нічого */ }
+    renderInfo();
+    renderBkStatus();
+  });
+
+  // ---------- Запуск ----------
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && data) render();
+  });
+  setInterval(() => {
+    if (!data) return;
+    setTimer();
+    const mk = Math.floor(Date.now() / 60000);
+    if (mk !== lastMin) { lastMin = mk; render(); } // раз на хвилину оновлюємо цифри (і дату опівночі)
+  }, 1000);
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+  (async function boot() {
+    data = await loadData();
+    let migrated = false;
+    if (!data) {
+      data = migrateFromOld();
+      migrated = !!data;
+      if (!data) data = { v: 1, shifts: [], rate: 0, updatedAt: Date.now() };
+      await persist();
+    } else if (needsResync) {
+      await persist(); // відновлюємо основне сховище із запасної копії
+    }
+    await initBackup();
+    btn.disabled = false;
+    render();
+    if (migrated) note('Імпортовано змін зі старої версії: ' + data.shifts.length + '.');
+  })();
+})();
+</script>
+</body>
+</html>
